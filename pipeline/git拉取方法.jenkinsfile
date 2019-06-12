@@ -1,0 +1,4 @@
+checkout scm: [$class: 'GitSCM', branches: [[name: "*/${repoBranch}"]], doGenerateSubmoduleConfigurations: false, userRemoteConfigs: [[credentialsId: "${gitCredentialsId}", url: "${repoUrl}"]]]
+
+
+git branch: "${repoBranch}", credentialsId: "${gitCredentialsId}", url: "${repoUrl}"

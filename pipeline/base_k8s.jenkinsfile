@@ -2,7 +2,7 @@ def label = "salve-${UUID.randomUUID().toString()}"
 podTemplate(label: label,cloud: 'kubernetes'){
     node ("jnlp") {
     def port='8761'
-    def image='harbor.yitaichang.cn/ytc/apis-eureka-server:latest'
+    def image='url/ytc/apis-eureka-server:latest'
     stage("deploy 生成"){
       if(fileExists('"${env.WORKSPACE}"/deploy.yml')){
         echo "文件存在！"

@@ -1,0 +1,86 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name:  {{server-name}}
+  labels:
+    name:  {{server-name}}
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name:  {{server-name}}
+    spec:
+      containers:
+      - image:  {{image}}
+        imagePullPolicy: IfNotPresent
+        name:  {{server-name}}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{port}}
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{port}}
+          initialDelaySeconds: 30
+          timeoutSeconds: 10      
+        ports:
+        - containerPort:  {{port}}
+          name:  {{server-name}}
+      # 日志挂载收集
+      #   volumeMounts:
+      #   - mountPath: /data
+      #     name: data
+      # volumes:
+      #   - name: data
+      #     emptyDir: {}
+      restartPolicy: Always
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name:  {{server-name}}
+spec:
+  selector:
+    name:  {{server-name}}
+  type:  ClusterIP 
+  ports:
+  - name: {{server-name}}
+    port:  80
+    targetPort:  {{port}}
+
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: {{server-name}}
+spec:
+  rules:
+    - host: {{server-name}}-pre.yitaichang.cn
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: {{server-name}}
+              servicePort: 80
+
+#---
+#apiVersion: autoscaling/v1
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: {{server-name}}
+#spec:
+#  scaleTargetRef:               
+#    kind: Deployment   
+#    name: {{server-name}}
+#  minReplicas: 1               
+#  maxReplicas: 5
+#  targetAverageUtilization: 50  
+#

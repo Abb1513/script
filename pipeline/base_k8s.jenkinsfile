@@ -1,0 +1,21 @@
+def label = "salve-${UUID.randomUUID().toString()}"
+podTemplate(label: label,cloud: 'kubernetes'){
+    node ("jnlp") {
+    def port='8761'
+    def image='harbor.yitaichang.cn/ytc/apis-eureka-server:latest'
+    stage("deploy 生成"){
+      if(fileExists('"${env.WORKSPACE}"/deploy.yml')){
+        echo "文件存在！"
+        sh "sed -e 's#{{server-name}}#${params.ServiceName}#g;s#{{port}}#${port}#g;s#{{image}}#${image}#g'  deploy.yml > deploy.yml"
+      }else{
+        echo '文件不存在！'
+        sh "cp /data/deploy/deploy.yml  ."
+        sh "sed -e 's#{{server-name}}#${params.ServiceName}#g;s#{{port}}#${port}#g;s#{{image}}#${image}#g'  /data/deploy/deploy.yml > deploy.yml"
+        sh 'cat deploy.yml'
+      }
+    }
+    stage("deploy 部署"){
+        sh 'kubectl apply -f deploy.yml'
+    }
+  }
+}

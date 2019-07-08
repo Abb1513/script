@@ -63,7 +63,7 @@ metadata:
   name: {{server-name}}
 spec:
   rules:
-    - host: {{server-name}}-pre.yitaichang.cn
+    - host: {{server-name}}-xxx.cn
       http:
         paths:
           - path: /

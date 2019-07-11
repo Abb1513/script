@@ -1,0 +1,11 @@
+node{
+    stage("git"){
+        echo "${params.branch}"
+        branch="${params.branch}".split('/')[1]
+        echo "${branch}"
+        echo "${params.ServerName}"
+        git branch: "${branch}", credentialsId: 'jenkins-git-root', url: ''
+        
+    }
+}
+## list parameters 插件

@@ -19,28 +19,30 @@ spec:
       - image:  {{image}}
         imagePullPolicy: IfNotPresent
         name:  {{server-name}}
+        resources:
+          limits:
+            cpu: 1000M
+            memory: 1000Mi
+          requests:
+            memory: 2000Mi
+            cpu: 2000M
         livenessProbe:
           httpGet:
             path: /
             port: {{port}}
-          initialDelaySeconds: 30
-          timeoutSeconds: 10
+          initialDelaySeconds: 30  # 首次启动
+          timeoutSeconds: 10  # 超时
+          failureThreshold: 3 #  失败次数
         readinessProbe:
           httpGet:
             path: /
             port: {{port}}
           initialDelaySeconds: 30
-          timeoutSeconds: 10      
+          timeoutSeconds: 10   
+          successThreshold: 0   
         ports:
         - containerPort:  {{port}}
           name:  {{server-name}}
-      # 日志挂载收集
-      #   volumeMounts:
-      #   - mountPath: /data
-      #     name: data
-      # volumes:
-      #   - name: data
-      #     emptyDir: {}
       restartPolicy: Always
 ---
 kind: Service
@@ -70,6 +72,10 @@ spec:
             backend:
               serviceName: {{server-name}}
               servicePort: 80
+#  tls:
+#    - hosts:
+#      - {{server-name}}-xxx.cn
+#      secretName:   
 
 #---
 #apiVersion: autoscaling/v1

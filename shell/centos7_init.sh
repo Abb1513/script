@@ -5,6 +5,7 @@ ntp_server=ntp.aliyun.com
 ssh_port=22
 ansible_key=http://
 defult_user=ops
+MASTER="salt.prod" # salt-master
 
 # yum源配置
 yum install -y wget 
@@ -15,7 +16,7 @@ yum makecache
 yum install -y epel-release
 
 # 常用软件安装
-yum install -y ntp wget tree telnet sysstat sysstat iptraf ncurses-devel openssl-devel zlib-devel OpenIPMI-tools nmap screen vim
+yum install -y ntp wget tree telnet sysstat sysstat iptraf ncurses-devel openssl-devel zlib-devel  nmap screen vim
 yum install epel-release  bash-completion   -y
 
 
@@ -82,3 +83,11 @@ sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 wget ${ansible_key}-O /tmp/ansible_key
 cat /tmp/ansible_key >> /home/root/.ssh/authorized_keys
 rm -f /tmp/ansible_key
+# salt 安装
+yum install -y salt-minion
+IP=`ifconfig eth0 | grep "inet" | awk '{ print $2}'`
+
+echo "id: ${IP}" >> /etc/salt/minion
+echo "master: ${MASTER}" >> /etc/salt/minion
+systemctl start salt-minion
+systemctl enable salt-minion

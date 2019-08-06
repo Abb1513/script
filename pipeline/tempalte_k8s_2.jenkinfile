@@ -11,7 +11,7 @@ node{
         }
         stage("Mvn"){
             sh 'source /etc/profile'
-            sh 'mvn clean package install deploy -Dmaven.test.skip=true -Denv=${env} -Drepository.url=http://nexus.${env}.yitaichang.cn'
+            sh 'mvn clean package install deploy -Dmaven.test.skip=true -Denv=${env} -Drepository.url=http://nexus.${env}.xx.cn'
         }
         stage("Docker Build"){
 sh"""
@@ -24,7 +24,7 @@ COPY ${params.ServerName}/target/*.jar  /app.jar
 ENTRYPOINT [ "sh", "-c", "java -Djava.security.egd=file:/dev/./urandom -jar /app.jar" ]
 EOF
 """
-        withDockerRegistry(credentialsId: 'docker_registry', url: 'http://harbor.yitaichang.cn') {
+        withDockerRegistry(credentialsId: 'docker_registry', url: 'http://harbor.xx.cn') {
               docker.build(imageName).push()
             }
         }

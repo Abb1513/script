@@ -19,6 +19,9 @@ spec:
       - image:  {{image}}
         imagePullPolicy: IfNotPresent
         name:  {{server-name}}
+        env:
+          - name: spring.profiles.active
+            value: {{env}}
         resources:
           limits:
             cpu: 1000M

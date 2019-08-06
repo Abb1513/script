@@ -91,3 +91,4 @@ echo "id: ${IP}" >> /etc/salt/minion
 echo "master: ${MASTER}" >> /etc/salt/minion
 systemctl start salt-minion
 systemctl enable salt-minion
+

@@ -1,0 +1,43 @@
+node{
+   timestamps{
+        def port="PORT"
+        def url="GITURL"
+        def ServerName="SERVERNAME"
+        def env="dev"
+        def branch="${params.branch}".split('/')[1]
+        def imageName="registry.cn-shenzhen.aliyuncs.com/qxd/${ServerName}:${branch}"
+        stage("Git Clone"){
+            git branch: "${branch}", credentialsId: 'jenkins-git-root', url: '${url}'
+        }
+        stage("Mvn"){
+            sh 'source /etc/profile'
+            sh 'mvn clean package install deploy -Dmaven.test.skip=true -Denv=${env} -Drepository.url=http://nexus.${env}.yitaichang.cn'
+        }
+        stage("Docker Build"){
+sh"""
+cat > Dockerfile << EOF
+FROM openjdk:8-jre-alpine
+MAINTAINER YTC
+ENV TZ "Asia/Shanghai"
+RUN sh -c 'touch /app.jar'
+COPY ${params.ServerName}/target/*.jar  /app.jar
+ENTRYPOINT [ "sh", "-c", "java -Djava.security.egd=file:/dev/./urandom -jar /app.jar" ]
+EOF
+"""
+        withDockerRegistry(credentialsId: 'docker_registry', url: 'http://harbor.yitaichang.cn') {
+              docker.build(imageName).push()
+            }
+        }
+        stage('Deploy'){
+            def reusult=sh script "ls -d /data/deploy/${ServerName}"
+            if (result !=0 ){
+                sh "mkdir -p /data/deploy/${ServerName}"
+            }
+            sh "cp /data/deploy/deploy.yml  ."
+            sh "sed -e 's#{{server-name}}#${params.ServiceName}#g;s#{{port}}#${port}#g;s#{{image}}#${image}#g;s#{{env}}#${env}#g'  /data/deploy/deploy.yml > deploy.yml"
+            sh 'cat deploy.yml'
+            sh "/bin/cp deploy.yml /data/deploy/${ServerName}/${ServerName}.yml"
+            sh 'kubectl apply -f deploy.yml'
+        }
+    }
+}

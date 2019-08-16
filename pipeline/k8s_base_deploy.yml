@@ -15,8 +15,6 @@ spec:
       labels:
         name:  {{server-name}}
     spec:
-      imagePullSecrets:
-        - name: aliyun
       containers:
       - image:  {{image}}
         imagePullPolicy: IfNotPresent

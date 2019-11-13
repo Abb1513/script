@@ -34,11 +34,11 @@
     - {src: "templates/my.cnf.j2", dest: "/etc/my.cnf"}
     - {src: "templates/mysqld.j2", dest: "/etc/init.d/mysqld"}
 
-#- name: Add mysql bin to profile
-#  lineinfile: dest={{ item }} line="export PATH=$PATH:{{install_path}}/bin/"
-#  with_items:
-#    - /etc/profile
-#    - /etc/bashrc
+- name: Add mysql bin to profile
+  lineinfile: dest={{ item }} line="export PATH=$PATH:{{install_path}}/bin/"
+  with_items:
+    - /etc/profile
+    - /etc/bashrc
 
 - name: Init mysql db
   #command: mysqld --initialize  --user=mysql  --basedir={{install_path}} --datadir={{ data_path }}/data

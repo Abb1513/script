@@ -1,0 +1,17 @@
+---
+  - hosts: 10.0.1.55
+    vars:
+      ip: "{{ansible_default_ipv4['address']}}"
+    tasks:
+      - name: 判断路径是否存在
+        shell: ls /app/software/go_top
+        ignore_errors: True
+        register: result
+      - name: 创建文件夹
+        file: path=/app/software/go_top state=directory
+        when: result is failed
+      - name: 分发文件
+        copy: src=/data/GoProject/go_top dest=/app/software/go_top/ mode=0755
+      - name: start
+       # shell: 'nohup  /app/software/go_top/go_top --pushgateway=http://10.0.1.1:9091 --ip="{{ansible_eth0["ipv4"]["address"] }}" &'
+        shell:  "nohup  /app/software/go_top/go_top --pushgateway=http://10.0.1.1:9091 &"

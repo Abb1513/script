@@ -1,0 +1,29 @@
+---
+- hosts: 10.0.10.181,10.0.10.182,10.0.10.183
+  user: root
+  gather_facts: false
+  tasks:
+ # - name: 下载node_exporter
+ #   get_url: url=https://github.com/prometheus/node_exporter/releases/download/v0.18.1/node_exporter-0.18.1.linux-amd64.tar.gz  dest=files
+  - name: 判断路径是否存在
+    shell: ls /application
+    ignore_errors: True
+    register: result
+  - name: 创建文件夹
+    file: path=/application state=directory
+    when: result is failed
+  - name: 安装node_exporter
+    unarchive: src=files/node_exporter-0.18.1.linux-amd64.tar.gz dest=/application/ copy=yes mode=755
+  - name: 添加启动user
+    user: name=node_exporter shell=/sbin/nologin
+  - name: 重命名
+    shell: mv /application/node_exporter-0.18.1.linux-amd64 /application/node_exporter&& chown -R node_exporter:node_exporter /application/node_exporter 
+  - name: 添加node_exporter服务
+    copy: src=node_exporter.service dest=/usr/lib/systemd/system/
+    notify:
+    - reload systemd
+  - name: 启动服务
+    service: name=node_exporter enabled=yes state=started
+  handlers: 
+  - name:  reload systemd
+    command: systemctl daemon-reload

@@ -1,0 +1,18 @@
+---
+# defaults file for mysql
+#  安装路径
+install_path: /app/software/mysql
+
+# 数据存储路径
+data_path: /data/mysql
+
+# mysql 初始账号 空则不生成
+mysql_user_name: "ops"
+
+# 初始账号host
+user_host: "%"
+
+# 初始账号密码
+mysql_user_password: "123456"
+# 权限
+privileges: "*.*:ALL,GRANT"

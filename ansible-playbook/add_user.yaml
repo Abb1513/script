@@ -1,0 +1,16 @@
+---
+- hosts: prod:!10.0.1.1
+  vars:
+    user: jms
+    password: "$6$FfNW3VAq9Tijl8mp$i2QGnxaYJ83JEiNoaa5iCS6q4aRET5olsu6Tx8ks5ARzyA87loO2v9A9xS60HqfQDxlR2cmLJPrvOy14y6y6B1"
+  remote_user: root
+  tasks:
+  - name: Add user {{ user }}
+    user: name={{user}} comment="jms user" password={{ password }}
+  - name: Config /etc/sudoers
+    lineinfile: dest=/etc/sudoers state=present  line='{{item}}' regexp="^jms"  validate='visudo -cf %s'
+    with_items:
+           - "{{ user}} ALL=(ALL) NOPASSWD: ALL"
+          # - "Defaults: {{user}}  !requiretty"
+  - name: delete huangh
+    lineinfile: dest=/etc/sudoers state=absent  regexp="^huangh"  validate='visudo -cf %s'

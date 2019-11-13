@@ -1,0 +1,67 @@
+---
+# tasks file for mysql
+#- name: Down Mysql tar
+#  get_url: 
+#    url: http://mirrors.163.com/mysql/Downloads/MySQL-5.7/mysql-5.7.27-el7-x86_64.tar.gz
+#    dest: /tmp
+#    force: no
+
+- name: unarchive tar
+  unarchive:
+    src: /tmp/mysql-5.7.27-el7-x86_64.tar.gz
+    dest: /tmp/
+    copy: yes
+
+- name: Add user mysql
+  user: name=mysql comment="mysql user" create_home=no shell="/sbin/nologin"
+
+- name: Move mysql paceage to specified directory
+  command: mv /tmp/mysql-5.7.27-el7-x86_64 {{install_path}}  creates={{install_path}}
+ # args:  mysql-5.7.27-el7-x86_64
+ #   creates: {{ install_path }}
+
+- name: Mkdir mysql_data_dir
+  file: path={{data_path}}/{{item}} state=directory owner=mysql group=mysql
+  with_items:
+    - data
+    - log
+
+- name: Copy mysql my.cnf
+  template:
+    src:  "{{item.src}}"
+    dest: "{{item.dest}}"
+  with_items:
+    - {src: "templates/my.cnf.j2", dest: "/etc/my.cnf"}
+    - {src: "templates/mysqld.j2", dest: "/etc/init.d/mysqld"}
+
+#- name: Add mysql bin to profile
+#  lineinfile: dest={{ item }} line="export PATH=$PATH:{{install_path}}/bin/"
+#  with_items:
+#    - /etc/profile
+#    - /etc/bashrc
+
+- name: Init mysql db
+  #command: mysqld --initialize  --user=mysql  --basedir={{install_path}} --datadir={{ data_path }}/data
+  shell: mysqld --initialize 
+
+- name: chmod +x /etc/init.d/mysqld
+  command: chmod 744 /etc/init.d/mysqld 
+
+- name: Add mysqld to system start
+  command: /sbin/chkconfig --add mysqld
+
+- name: Add mysql to system start when init 345
+  command: /sbin/chkconfig --level 345 mysqld on
+
+#- name: init mysql user
+#  mysql_user: 
+#    name: "{{ mysql_user_name }}"
+#    host: "{{ user_host }}"
+#    state: present
+#  when: mysql_user_name != "root" and mysql_user_name != ""
+
+#- name: chown mysql mysql
+#  file:   path={{ data_path }} owner=mysql group=mysql recurse=yes # 递归
+
+- name: Retart mysql
+  service: name=mysqld state=restarted

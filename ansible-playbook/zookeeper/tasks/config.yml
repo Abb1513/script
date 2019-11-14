@@ -1,0 +1,17 @@
+---
+- name: Write myid file.
+  template: src=myid.j2 dest={{data_dir}}/data/myid owner=zookeeper group=zookeeper force={{ zookeeper_force_myid }}
+  tags: config
+
+#- name: Update the log4j config with saner production values
+#  template: src=log4j.properties.j2 dest={{ zookeeper_dir }}/conf/log4j.properties
+#  tags: config
+
+- name: Owner zookeeper
+  command: chown -R {{ user }}.{{ group }} {{ data_dir }} {{ zookeeper_dir }}
+
+- name: Configure zookeeper zoo.cfg
+  template: src=zoo.cfg.j2 dest={{ zookeeper_dir }}/conf/zoo.cfg owner=zookeeper group=zookeeper
+  tags: config
+  notify:
+    - Restart zookeeper

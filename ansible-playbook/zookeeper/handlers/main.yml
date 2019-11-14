@@ -1,0 +1,13 @@
+---
+# handlers file for zookeeper
+
+
+#- name: Reload systemctl daemon
+#  command: systemctl daemon-reload
+#  when: ansible_service_mgr == 'systemd'
+
+- name:  Restart zookeeper
+  command: /etc/init.d/zookeeper restart
+
+- name: Chmod /etc/init.d/zookeeper
+  file: dest=/etc/init.d/zookeeper mode=755

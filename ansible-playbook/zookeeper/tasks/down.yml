@@ -1,0 +1,31 @@
+---
+
+- name: "Download {{zookeeper_version}}"
+  get_url: url="{{zookeeper_url}}" dest=/tmp/zookeeper-{{zookeeper_version}}.tar.gz force=no
+  tags: bootstrap
+
+- name: Install OS Packages
+  yum: name={{ item }} state=present
+  with_items:
+    - libselinux-python
+  tags: bootstrap
+
+
+- group: name={{group}} system=yes
+- user: name={{user}} group={{group}} system=yes shell=/sbin/nologin
+
+- name: Change ownership on zookeeper directory.
+  file: path={{zookeeper_dir}} state=directory owner=zookeeper group=zookeeper
+  tags: bootstrap
+
+- name: "Create zookeeper {{item}} directory."
+  file: path={{data_dir}}/{{item}} state=directory owner=zookeeper group=zookeeper
+  tags: bootstrap
+  with_items:
+    - data
+    - log
+
+- name: Unpack tarball.
+  command: tar zxf /tmp/zookeeper-{{zookeeper_version}}.tar.gz  --strip-components=1 chdir={{zookeeper_dir}} creates={{zookeeper_dir}}/bin
+  tags: bootstrap 
+

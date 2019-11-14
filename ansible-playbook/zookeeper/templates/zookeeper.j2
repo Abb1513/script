@@ -1,0 +1,25 @@
+#!/bin/sh
+# chkconfig: 345 99 10
+# description: Auto-starts zookeeper
+# /etc/init.d/zoo
+# zookeeper auto-start
+
+zoo={{zookeeper_dir}}/bin/zkServer.sh
+
+case "$1" in
+start) 
+       $zoo start
+       ;;
+stop)  
+       $zoo stop
+       ;;
+status)  
+       $zoo status
+       ;;                                                
+restart)
+       $zoo restart
+        ;;
+*)
+       echo "require start|stop|status|restart"
+       ;;
+esac

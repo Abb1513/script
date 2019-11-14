@@ -1,0 +1,9 @@
+---
+
+- name: clean zookeeper
+  file: dest={{ item }}  state=absent
+  with_items:
+    - {{ zookeeper_dir }}
+    - {{ data_dir }}
+    - {{ /etc/init.d/zookeeper }}
+  

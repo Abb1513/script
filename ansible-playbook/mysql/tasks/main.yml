@@ -17,8 +17,6 @@
 
 - name: Move mysql paceage to specified directory
   command: mv /tmp/mysql-5.7.27-el7-x86_64 {{install_path}}  creates={{install_path}}
- # args:  mysql-5.7.27-el7-x86_64
- #   creates: {{ install_path }}
 
 - name: Mkdir mysql_data_dir
   file: path={{data_path}}/{{item}} state=directory owner=mysql group=mysql
@@ -42,7 +40,7 @@
 
 - name: Init mysql db
   #command: mysqld --initialize  --user=mysql  --basedir={{install_path}} --datadir={{ data_path }}/data
-  shell: mysqld --initialize 
+  shell: mysqld --initialize-insecure  
 
 - name: chmod +x /etc/init.d/mysqld
   command: chmod 744 /etc/init.d/mysqld 

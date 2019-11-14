@@ -1,0 +1,11 @@
+---
+# tasks file for zookeeper
+- include: down.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: systemd.yml
+
+- include: config.yml
+
+- include: clean.yml
+  when: {{ clean }} == "yes"

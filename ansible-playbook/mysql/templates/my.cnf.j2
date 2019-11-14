@@ -6,8 +6,10 @@
 
 [client]
 default-character-set = utf8mb4
+socket ={{data_path}}/mysql.sock
 [mysql]
 default-character-set = utf8mb4
+socket ={{data_path}}/mysql.sock
 [mysqld]
 
 # Remove leading # and set to the amount of RAM for the most important data
@@ -21,7 +23,6 @@ default-character-set = utf8mb4
 basedir = {{install_path}}
 datadir ={{data_path}}/data
 port =3306
-#server_id = {{ansible_eth0.ipv4.address.split(".")[-1]}}
 server_id={{ansible_default_ipv4.address.split(".")[-1]}}
 socket ={{data_path}}/mysql.sock
 user=mysql

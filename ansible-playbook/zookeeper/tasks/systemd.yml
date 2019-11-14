@@ -1,0 +1,13 @@
+---
+
+- name: Systemd script.
+  template: src=zookeeper.j2 dest=/etc/init.d/zookeeper
+  tags: systemd  
+
+- name: Chmod /etc/init.d/zookeeper
+  file: dest=/etc/init.d/zookeeper mode=0755
+  tags: systemd
+
+- name: Enable zookeeper service
+  command: chkconfig zookeeper on
+  tags: systemd

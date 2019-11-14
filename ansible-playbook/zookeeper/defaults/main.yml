@@ -1,0 +1,27 @@
+---
+# defaults file for zookeeper
+
+zookeeper_version: '3.4.10'
+zookeeper_url: https://mirrors.huaweicloud.com/apache/zookeeper/zookeeper-{{zookeeper_version}}/zookeeper-{{zookeeper_version}}.tar.gz
+
+# zoo.cfg
+tickTime: 2000
+initLimit: 10
+syncLimit: 5
+clientPort: 2181
+maxClientCnxns: 60
+zookeeper_cluster_ports: "2888:3888"
+
+# PATH
+data_dir: /data/zookeeper
+zookeeper_dir: /app/software/zookeeper
+zookeeper_force_myid: yes
+
+
+# User
+user: zookeeper
+group: zookeeper
+
+
+# When yes cleans zookeeper installation
+clean: no

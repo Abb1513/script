@@ -15,7 +15,7 @@
 - user: name={{user}} group={{group}} system=yes shell=/sbin/nologin
 
 - name: Change ownership on zookeeper directory.
-  file: path={{zookeeper_dir}} state=directory owner=zookeeper group=zookeeper
+  file: path={{zookeeper_dir}} state=directory owner={{user}} group={{group}}
   tags: bootstrap
 
 - name: "Create zookeeper {{item}} directory."
@@ -27,5 +27,4 @@
 
 - name: Unpack tarball.
   command: tar zxf /tmp/zookeeper-{{zookeeper_version}}.tar.gz  --strip-components=1 chdir={{zookeeper_dir}} creates={{zookeeper_dir}}/bin
-  tags: bootstrap 
-
+  tags: bootstrap

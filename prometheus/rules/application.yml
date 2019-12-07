@@ -1,0 +1,12 @@
+# 判断是否down
+groups:
+  - name: AppStatus
+    rules:
+    - alert: AppDown
+      expr: probe_success == 0
+      for: 1m
+      labels:
+        severity: 'critical'
+      annotations:
+        summary: "{{$labels.instance}} Port  Connection timeout"
+        description: "Service_name: {{$labels.service_name}},  Host: {{$labels.instance}} Tcp Connection timeout 1 minute"

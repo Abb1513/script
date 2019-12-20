@@ -1,0 +1,25 @@
+---
+- group: name={{ group }} system=yes
+- user: name={{ user }} group={{ group }} system=yes shell=/sbin/nologin
+
+- name: unarchive tar
+  unarchive:
+    src:  files/{{ file_name }}.tar.gz
+    dest: /tmp/
+    copy: yes
+
+- command: mv /tmp/node_exporter-0.18.1.linux-amd64  {{ install_path }}
+
+#- name: Unpack tarball.
+#  command: tar zxf /etc/ansible/roles/node-exporter/files/{{ file_name }}.tar.gz  --strip-components=1  -C {{ install_path }}
+
+- name:  Chown dir
+  file: path={{ install_path }}  owner={{ user }} group={{ group }}  mode=755  state=directory
+
+- name: systemctl
+  template: src=node-exporter.j2  dest=/usr/lib/systemd/system/node-exporter.service
+  notify:
+    - systemd reload
+
+- name: start service
+  service: name=node-exporter enabled=yes state=restarted

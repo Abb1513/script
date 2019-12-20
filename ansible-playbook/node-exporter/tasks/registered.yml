@@ -1,0 +1,10 @@
+---
+
+- name: Registered Consul
+  tags: registered
+  uri:
+    url: "{{ consul_url }}"
+    method: PUT
+    body: {"id": "{{ ansible_default_ipv4.address }}", "name": "node-exporter",  "address": "{{ ansible_default_ipv4.address }}", "port": "{{ listen_port }}"}
+    status_code: 200
+    body_format: json

@@ -1,0 +1,11 @@
+---
+- name: clean dir
+  command: rm -rf {{ install_path }}
+
+- name: clean systemed
+  service: name=node-exporter state=stopped
+
+- name: clean systemed files
+  command: rm -rf /usr/lib/systemd/system/node-exporter.service
+  notify:
+    - systemd reload

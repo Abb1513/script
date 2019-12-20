@@ -8,13 +8,13 @@
 <li>告警级别：{{ .Labels.severity }}</li>
 <li>告警类型：{{ .Labels.alertname }} </li>
 <li>故障主机: {{ .Labels.instance }} </li>
-{{ if .Labels.service_name  }} 
+{{ if .Labels.service_name  }}
 <li>服务名称: {{.Labels.service_name}} </li>
 {{ end -}}
 <li>告警主题: {{ .Annotations.summary }} </li>
 <li>告警详情: {{ .Annotations.description }} </li>
-<li>触发时间: {{ (.StartsAt.Add 28800e9).Format "2006-01-02 15:04:05"  }} </li>
-<hr style="height:5px;border:none;border-top:1px solid #555555;" /> 
+<li>触发时间: {{ (.StartsAt.Local).Format "2006-01-02 15:04:05"  }} </li>
+<hr style="height:5px;border:none;border-top:1px solid #555555;" />
 {{- end }}
 {{- end }}
 {{ if gt (len .Alerts.Resolved) 0 -}}
@@ -24,8 +24,8 @@
 <li>告警类型：{{ .Labels.alertname }}   </li>
 <li>故障主机: {{ .Labels.instance }}   </li>
 <li>告警主题: {{ .Annotations.summary }} </li>
-<li>触发时间: {{ (.StartsAt.Add 28800e9).Format "2006-01-02 15:04:05"  }} </li>
-<li>恢复时间: {{ (.EndsAt.Add 28800e9).Format "2006-01-02 15:04:05"  }}  </li>
+<li>触发时间: {{ (.StartsAt.Local).Format "2006-01-02 15:04:05"  }} </li>
+<li>恢复时间: {{ (.EndsAt.Local).Format "2006-01-02 15:04:05"  }}  </li>
 <hr style="height:5px;border:none;border-top:1px solid #555555;" />
 {{- end }}
 {{- end }}

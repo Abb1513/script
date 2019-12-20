@@ -1,0 +1,10 @@
+[Unit]
+Description=node_exporter
+After=network.target
+[Service]
+Type=simple
+User={{ user }}
+ExecStart={{install_path}}/node_exporter --web.listen-address=:{{ listen_port }}
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

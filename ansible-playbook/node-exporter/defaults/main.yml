@@ -1,0 +1,12 @@
+---
+# vars file for node-exporter
+# 安装路径
+install_path: /app/software/node_exporter
+user: nodeexporter
+group: nodeexporter
+file_name: node_exporter-0.18.1.linux-amd64
+listen_port: 7777
+# 注册到consul
+isregistered: yes
+consul_url: "http://10.0.1.1:8500/v1/agent/service/register"
+clean: no

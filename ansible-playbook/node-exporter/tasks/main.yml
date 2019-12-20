@@ -1,0 +1,9 @@
+---
+# tasks file for node-exporter
+- include: install.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: registered.yml
+
+#- include: clean.yml
+#  when: {{ clean }} == 'yes'

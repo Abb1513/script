@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-#     RedHat system statup script for 
-#     Based on SUSE system statup script for 
+#     RedHat system statup script for
+#     Based on SUSE system statup script for
 #     Copyright (C) 2007  Pascal Bleser
 #
 #     This library is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 #
 ###############################################################################
 ### BEGIN INIT INFO
-# Provides:          
+# Provides:
 # Required-Start:    $local_fs $remote_fs $network $time $named
 # Should-Start: $time sendmail
 # Required-Stop:     $local_fs $remote_fs $network $time $named
@@ -148,8 +148,16 @@ case "$1" in
         then
             cd ${BIN_DIR}
             PID=`ps hww -u ${PUSER} -o pid | xargs echo -n`
-            ${STOP_CMD} 
-            kill -9 ${PID}
+            ${STOP_CMD}
+          #  curl -X PUT  # 变更不可用
+            sleep 3
+          #  curl -X PUT  # 踢下线
+            kill -15 ${PID}
+            sleep 3 
+            PID=`ps hww -u ${PUSER} -o pid | xargs echo -n`
+            if [[ ${PID} ]]; then
+                kill -9 ${PID}
+            fi
         fi
         ;;
     restart)

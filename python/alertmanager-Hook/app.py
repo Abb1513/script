@@ -43,7 +43,7 @@ def send():
             host = i['labels']['instance']
             description = i['annotations']['description']
             summary = i["annotations"]["summary"]
-            startTime = i["startsAt"]
+            startTime = time.strptime(i["startsAt"],"%Y-%m-%d %H:%M:%S")
             service_name = i["labels"].get("service_name")
             department = i["labels"].get("department")
             # if status == "resolved":

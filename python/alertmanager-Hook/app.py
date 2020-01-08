@@ -17,9 +17,9 @@ import logging
 
 
 url = {
-    "ops": "https://oapi.dingtalk.com/robot/send?access_token=ad336b5e9233b966526c63b8f17a946133a5727b6f92b0e32a397373fba50cce",
-    "ft":  "https://oapi.dingtalk.com/robot/send?access_token=87643be14f74b59a4247699c45a781a1352ea77aabab50c531db336c49b5503b",
-    "mt":  "https://oapi.dingtalk.com/robot/send?access_token=e72e440b8fe657492b2084d03f1ed81ae621f73c35ff88cc6259aeb0587d03b4"
+    "ops": "",
+    "ft":  "",
+    "mt":  ""
 }
 
 

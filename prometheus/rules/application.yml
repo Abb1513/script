@@ -10,3 +10,13 @@ groups:
       annotations:
         summary: "{{$labels.instance}} Port  Connection timeout"
         description: "Service_name: {{$labels.service_name}},  Host: {{$labels.instance}} Tcp Connection timeout 1 minute"
+  - name: Kafka 
+    rules:
+    - alert: Kafka topic lag
+      expr: sum(kafka_consumergroup_lag{topic !='flume-data'}) by (consumergroup, topic) > 150
+      for: 2m
+      labels:
+        severity: 'critical'
+      annotations:
+        summary: "{{$labels.instance}} consumergroup: {{$labels.consumergroup}},  topic {{$labels.topic}} lag"
+        description: "{{$labels.instance}} consumergroup: {{$labels.consumergroup}},   topic:{{$labels.topic}} lag > 150. now value is {{$value}}"

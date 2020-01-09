@@ -1,0 +1,68 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.exmail.qq.com:587'
+  smtp_from: ''
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+  smtp_hello: 'qq.com'
+  #smtp_require_tls: true
+templates:
+  - '/data/alertmanager/template/*.tmpl'
+
+# 告警分组
+route:
+  receiver: 'ops'
+  group_wait: 1s
+  group_interval: 1m
+  repeat_interval: 12h
+  group_by: ['alertname']
+  routes:
+    - receiver: 'ft'
+      group_wait: 10s
+      group_by: ['alertname','service_name']
+      match:
+        department: ft
+    - receiver: 'mt'
+      group_wait: 10s
+      group_by: ['alertname','service_name']
+      match:
+        department: mt
+    - receiver: 'ops'
+      group_wait: 10s
+      group_by: ['alertname','service_name']
+      match:
+        type: '*'
+  
+receivers:
+  - name: 'ops'
+    webhook_configs:
+      - url: 'http://127.0.0.1:6666/'
+      - url: 'http://127.0.0.1:6000' # 服务保活
+    email_configs:
+      - to: ''
+        send_resolved: true
+        headers: { Subject: "监控告警" }
+        html: '{{ template "email.alter.html" . }}'
+  - name: 'ft'
+    webhook_configs:
+      - url: 'http://127.0.0.1:6666/'
+    email_configs:
+      - to: ''
+        send_resolved: true
+        headers: { Subject: "监控告警" }
+        html: '{{ template "email.alter.html" . }}'
+  - name: 'mt'
+    email_configs:
+      - to: ''
+        send_resolved: true
+        headers: { Subject: "监控告警" }
+        html: '{{ template "email.alter.html" . }}'
+    webhook_configs:
+      - url: 'http://127.0.0.1:6666/'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

@@ -1,0 +1,225 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: nginx
+spec:
+  replicas: 1
+  minReadySeconds: 5  # 这里需要估一个比较合理的值，从容器启动到应用正常提供服务
+  strategy:  # k8s 默认的 strategy 就是 RollingUpdate， 这里写明出来可以调节细节参数
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1  # 更新时允许最大激增的容器数，默认 replicas 的 1/4 向上取整
+      maxUnavailable: 0  # 更新时允许最大 unavailable 容器数，默认 replicas 的 1/4 向下取整
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+         run: nginx
+    spec:
+      #hostNetwork: true
+      #hostPID: true
+      #hostIPC: true
+      ##为了让容器里的node-exporter获取到主机上的网络、PID、IPC指标，这里设置了hostNetwork: true、hostPID: true、hostIPC: true，来与主机共用网络、PID、IPC这三个namespace.
+      #设置容忍性
+      tolerations:
+      - key: "spotInstance"
+        #如果操作符为Exists，那么value属性可省略,如果不指定operator，则默认为Equal
+        operator: "Equal"
+        value: "true" 
+        effect: "PreferNoSchedule"
+        tolerationSeconds: 180
+        #如果运行此Pod的Node，被设置了具有PreferNoSchedule效果的Taint(污点)，这个Pod将在存活180s后才被驱逐。
+        #如果没有设置tolerationSeconds字段，将永久运行。
+        #意思是这个Pod要容忍的有污点的Node的key是spotInstance Equal true,效果是PreferNoSchedule，
+        #tolerations属性下各值必须使用引号，容忍的值都是设置Node的taints时给的值。
+        ##NoSchedule：只有拥有和这个 taint 相匹配的 toleration 的 pod 才能够被分配到这个节点。
+        ##PreferNoSchedule：系统会尽量避免将 pod 调度到存在其不能容忍 taint 的节点上，但这不是强制的。
+        #NoExecute ：任何不能忍受这个 taint 的 pod 都会马上被驱逐，任何可以忍受这个 taint 的 pod 都不会被驱逐。Pod可指定属性 tolerationSeconds 的值，表示pod 还能继续在节点上运行的时间。
+      affinity: 
+        nodeAffinity:
+          #soft，尽力执行，优先满足规则调度，在优选阶段执行
+          preferredDuringSchedulingIgnoredDuringExecution:
+          #范围1-100。这个涉及调度器的优选打分过程，每个node的评分都会加上这个weight，最后bind最高的node
+          #由于IgnoredDuringExecution，所以改变labels不会影响已经运行pod
+          #如果nodeAffinity 中 nodeSelectorTerms 有多个选项，如果节点满足任何一个条件就可以；如果 matchExpressions 有多个选项，则只有同时满足这些逻辑选项的节点才能运行 pod.
+          - weight: 1 
+            preference: 
+              matchExpressions: 
+              - key: lifecycle 
+                operator: In 
+                values: 
+                - Ec2Spot
+          #hard，严格执行，满足规则调度，否则不调度，在预选阶段执行，所以违反hard约定一定不会调度到
+          #requiredDuringSchedulingRequiredDuringExecution：这个属性暂时还不支持，与之前类似，只是后缀不同，代表如果labels发生改变，kubelet将驱逐不满足规则的pod
+          #In：label 的值在某个列表中
+          #NotIn：label 的值不在某个列表中
+          #Exists：某个 label 存在
+          #DoesNotExist: 某个 label 不存在
+          #Gt：label 的值大于某个值（字符串比较）
+          #Lt：label 的值小于某个值（字符串比较)
+          requiredDuringSchedulingIgnoredDuringExecution: 
+            nodeSelectorTerms: 
+            - matchExpressions: 
+              - key: intent 
+                operator: In 
+                values: 
+                - apps
+          #以上node亲和规则表示，只能将Pod放置在带有标签的标签上，该标签的键为intent和，值为apps。另外，在满足该条件的节点中，应首选带有标签的标签的节点，该标签的键为lifecycle和值为Ec2Spot。
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: run
+                operator: In
+                values:
+                - nginx
+            topologyKey: "kubernetes.io/hostname"
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - store
+            topologyKey: "kubernetes.io/hostname"
+      #容器间亲和性和反亲和性需要大量处理，这可能会大大减慢大型群集中的调度。我们不建议在大于数百个节点的群集中使用它们。
+      #对称性，即S1设置了与S2相关的hard反亲和性规则，就必须对称地给S2设置与S1相关的hard反亲和性规则，以达到调度预期。
+      #Don't co-locate pods of this service with any other pods including pods of this service: {LabelSelector: empty, TopologyKey: "node"}，在反亲和性中，空的selector表示不与任何pod亲和。
+      #由于hard规则在预选阶段处理，所以如果只有一个node满足hard亲和性，但是这个node又不满足其他预选判断，比如资源不足，那么就无法调度。所以何时用hard，何时用soft需要根据业务考量。
+      #如果所有node上都没有符合亲和性规则的target pod，那么pod调度可以忽略亲和性.
+      #pod亲和合法的operator包括：In, NotIn, Exists, DoesNotExist      
+      #对于亲和性和软反亲和性，不允许空topologyKey;
+      #对于硬反亲和性，LimitPodHardAntiAffinityTopology控制器用于限制topologyKey只能是kubernetes.io/hostname;
+      #对于软反亲和性，空topologyKey被解读成kubernetes.io/hostname, failure-domain.beta.kubernetes.io/zone and failure-domain.beta.kubernetes.io/region的组合
+      restartPolicy: Always
+      containers:
+      - name: nginx
+        image: 709833309978.dkr.ecr.eu-west-2.amazonaws.com/nginx-build-1.17.6:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          tcpSocket:
+            port: 443
+          initialDelaySeconds: 6
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          tcpSocket:
+            port: 80
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        # securityContext会覆盖在Pod级别进行的设置  
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 3000
+          fsGroup: 2000
+          privileged: false
+          readOnlyRootFilesystem: true 
+          allowPrivilegeEscalation: false
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "chown nginx.nginx -R /var/log/nginx"]
+        ports:
+        - name: http
+          containerPort: 80
+        - name: https
+          containerPort: 443
+        resources:
+          requests:
+            cpu: 0.1
+            memory: 50Mi
+            ephemeral-storage: 300Mi #定义存储的限制为100M
+          limits:
+            cpu: 1
+            memory: 500Mi
+            ephemeral-storage: 300Mi #定义存储的限制为100M
+        volumeMounts:
+          - name: nginx-pv-claim
+            mountPath: /etc/nginx
+          - name: fluentd
+            mountPath: /var/log/nginx/fluentd
+          - name: tz-config
+            mountPath: /etc/localtime
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sysctl -e -w net.core.somaxconn=32768;  sysctl -e -w fs.file-max=65535;  sysctl -e -w net.ipv4.ip_local_port_range="1025 65535";  ulimit -n 65536;
+        name: sysctl
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+              - NET_ADMIN
+        volumeMounts:
+          - name: modifysys
+            mountPath: /sys
+      volumes:
+      - name: nginx-pv-claim
+        persistentVolumeClaim:
+          claimName: nginx-pv-claim
+      - name: fluentd
+        hostPath:
+          path: /var/log/nginx/fluentd
+      - name: tz-config
+        hostPath:
+          path: /usr/share/zoneinfo/Asia/Shanghai
+      - name: modifysys
+        hostPath:
+          path: /sys
+#      nodeSelector:
+#        slave: pre
+#预选策略，predicates是强制性规则，遍历所有的node节点，安装具体的预选策略筛选出符合要求的node列表，如果没有node符合predicates策略规则，那么pod就会被挂起，直到有node能够满足
+#优选策略，在第一步筛选的基础上，按照优选策略为待选node打分排序，获取最优者
+#预选策略–必须全部满足
+#CheckNodeCondition：检测node是否正常
+#GeneralPredicates：普通判断策略
+#HostName: 检测pod对象是否定义了pod.spec.hostname
+#PodFitsHostPorts：检测pods.spec.containets.ports.hostPort是否定义
+#MatchNodeSelector：检测pod是否设置了pods.spec.nodeSelector
+#PodFitsResources：检测pod的资源需求是否能被节点所满足
+#NoDiskConflict：检测pod依赖的存储卷是否能满足需求
+#PodToleratesNodeTaints: 检测pod上的spec.tolerations可容忍的污点是否完全包含节点上的污点
+#PodToleratesNodeNoExecuteTaints: 检测pod上是否启用了NoExecute级别的污点，默认没有启用
+#CheckNodeLabelPresence: 检测node上的标签的存在与否，默认没有启用
+#CheckServiceAffinity：将相同service pod的对象放到一起，默认没有启用
+#CheckVolumeBinding：检测节点上已绑定和未绑定的volume
+#NoVolumeZoneConflict：检测区域，是否有pod volume的冲突
+#CheckNodeMemoryPressure：检测内存节点是否存在压力
+#CheckNodePIDPressure：检测pid资源的情况
+#CheckNodeDiskPressure：检测disk资源压力
+#MatchInterPodAffity：检测pod的亲和性
+#下面的几个策略一般用不上（EBS,GCE,Azure）对这几个云厂商的
+#MaxEBSVolumeCount: 确保已挂载的EBS存储卷不超过设置的最大值，默认39
+#MaxGCEPDVolumeCount: 确保已挂载的GCE存储卷不超过设置的最大值，默认16
+#MaxAzureDiskVolumeCount: 确保已挂载的Azure存储卷不超过设置的最大值，默认16
+#优选策略
+#优选函数的评估: 如果一个pod过来，会根据启用的全部函数的得分相加得到的评估#
+
+#LeastRequested：最少请求，与节点的总容量的比值，#
+
+#计算公式：
+#(cpu((capacity-sum(requested))*10 / capacity)+memory((capacity-sum(requested))*10 / capacity)) / 2
+#BalancedResourceAllocation：cpu和内存资源被占用的比率相近程度，越接近，比分越高，平衡节点的资源使用情况，
+#计算公式：
+#cpu=cpu((capacity-sum(requested))*10 / capacity)
+#mem=memory((capacity-sum(requested))*10 / capacity)
+#NodePreferAvoidPods：在这个优先级中，优先级最高，得分非常高
+#根据节点的注解信息“scheduler.alpha.kubernetes.io/preferAvoidPods”
+#TaintToleration：将pod对象的spec.tolertions与节点的taints列表项进行匹配度检测，匹配的条目越多，得分越低
+#SeletorSpreading：尽可能的把pod分散开，也就是没有启动这个pod的node，得分会越高
+#InterPodAffinity：遍历pod的亲和性，匹配项越多，得分就越多
+#NodeAffinity：节点亲和性，亲和性高，得分高
+#MostRequested：空闲量越少的，得分越高，与LeastRequested不能同时使用，集中一个机器上面跑pod，默认没有启用
+#NodeLabel：根据node上面的标签来评估得分，有标签就有分，没有标签就没有分，默认没有启用
+#ImageLocality：一个node的得分高低，是根据node上面是否有镜像，有镜像就有得分，反之没有（根据node上已有满足需求的image的size的大小之和来计算。），默认没有启用

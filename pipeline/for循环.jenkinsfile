@@ -1,0 +1,65 @@
+def list = [
+        'PCNAME1',
+        'PCNAME2',
+        'PCNAME3'
+]
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Loop through PCs') {
+            steps {
+                loopPC(list)
+            }
+        }
+    }
+}
+
+def loopPC(list){
+    list.each {
+        println "Computer ${it}"
+    }
+}
+
+// 方法二
+
+#!/usr/bin/env groovy
+pipeline{
+    agent any
+    stages {
+        stage("s"){
+            steps{
+                stepsWithTry([
+            'https://google.com/',
+            'https://github.com',
+            'https://releases.hashicorp.com/',
+            'https://kubernetes-charts.storage.googleapis.com',
+            'https://gcsweb.istio.io/gcs/istio-release/releases'
+        ])
+            }
+        }
+    }
+
+}
+// node('master') {
+//     stage ('ALlinOneStage'){
+//         stepsWithTry([
+//             'https://google.com/',
+//             'https://github.com',
+//             'https://releases.hashicorp.com/',
+//             'https://kubernetes-charts.storage.googleapis.com',
+//             'https://gcsweb.istio.io/gcs/istio-release/releases'
+//         ])
+//     }
+// }
+//loop in one stage
+def stepsWithTry(list){
+    for (int i = 0; i < list.size(); i++) {
+        try {
+        sh "curl --connect-timeout 15 -v -L ${list[i]}"
+        } catch (Exception e) {
+            echo "Stage failed, but we continue"
+        }
+    }
+}

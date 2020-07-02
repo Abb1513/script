@@ -1,38 +1,30 @@
-Role Name
-=========
+#### 变量
+```shell script
+修改 defaults main.yml
+二进制包放在 files下面
+替换包 修改defaults main.yml file_name字段
+```
+#### 使用
+```shell script
+vim main.yml
+---
+- hosts: 192.168.1.50
+  roles:
+    - role: node-exporter
 
-A brief description of the role goes here.
+ansible-playbook main.yml
+```
 
-Requirements
-------------
+#### 目录结构
+```shell script
+.
+├── README.md  # 文档
+├── defaults  # 默认变量
+├── handlers # 回调
+├── meta  
+├── tasks # 具体任务
+├── templates # 模板文件
+├── tests
+└── vars # 变量
+```
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
-
-Role Variables
---------------
-
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
-
-Dependencies
-------------
-
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
-
-Example Playbook
-----------------
-
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
-
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).

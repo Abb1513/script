@@ -1,0 +1,170 @@
+//qapple3 sub-library pre
+
+//依赖列表
+def relybranch = [
+    "vendor": "${params.branch_vendor}",
+    "env": "${params.branch_env}",
+    "server_base": "${params.branch_server_base}",
+    "global": "${params.branch_global}"
+]
+
+pipeline {
+    agent any
+    environment {
+        // 并发构建 生成唯一镜像名  制成品从中抽取
+        def Image_Name = "build-${UUID.randomUUID().toString()}"
+        // 项目目录
+        def Git_base = "${params.GIT_BASE}"
+        def Git_name = "${params.GIT_NAME}"
+        // 编译父目录
+        def Build_dir = "qapple3"
+        // 构建目录
+        def Dir_Name = "${GIT_NAME}-${BUILD_NUMBER}"
+
+        // 命名空间
+        def Deployenv = "${params.qapple_env}"
+
+        // 切分qapple_,用于更改makefile二进制文件名称
+        def binary = "${Git_name}".replace("apple_", '')
+        // deployment name
+        def Deploy_Name = "${Git_name}".replace("qapple_", '')
+
+        // push 私仓做版本区别 时间节点
+        def currentTime = new Date().format("yyyyMMddHHmmss")
+        // git的url
+        def url = "https://jenkins:icescn@g.qapple.io"
+        // git的uri
+        def giturl = "${url}/${Git_base}/${Git_name}.git"
+        // 服务名称
+        def deploy_name = "go-${Deploy_Name}-server"
+        // 镜像仓库
+        def aws_container_addr = "789787395701.dkr.ecr.ap-northeast-1.amazonaws.com"
+
+    }
+
+    stages {
+        stage('拉取依赖') {
+            steps {
+                script {
+                    relybranch.each {
+                        entry ->
+                            stage(entry.key) {
+                                timestamps {
+                                    echo "$entry.value"
+                                    dir(Dir_Name) {
+                                        checkout([$class: 'GitSCM', branches: [
+                                            [name: "${entry.value}"]
+                                        ], doGenerateSubmoduleConfigurations: false, extensions: [
+                                            [$class: 'RelativeTargetDirectory', relativeTargetDir: "${entry.key}"],
+                                            [$class: 'CloneOption', depth: 1, noTags: true, reference: '', shallow: true]
+                                        ], submoduleCfg: [], userRemoteConfigs: [
+                                            [credentialsId: 'jenkins', url: "${url}/${Git_base}/${entry.key}.git"]
+                                        ]])
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+
+        stage('代码拉取') {
+            steps {
+                dir(Dir_Name) {
+                    // git changelog: true, branch: "${params.branch}", credentialsId: "jenkins", url: "${giturl}"
+                    checkout([$class: 'GitSCM', branches: [
+                        [name: "${params.branch}"]
+                    ], doGenerateSubmoduleConfigurations: false, extensions: [
+                        [$class: 'RelativeTargetDirectory', relativeTargetDir: "${Git_name}"],
+                        [$class: 'CloneOption', depth: 1, noTags: true, reference: '', shallow: true]
+                    ], submoduleCfg: [], userRemoteConfigs: [
+                        [credentialsId: 'jenkins', url: "${giturl}"]
+                    ]])
+                }
+            }
+        }
+
+        stage('编译二进制') {
+            steps {
+                dir(Dir_Name) {
+                    sh 'sed -i "/^#include<stdlib.h>/a\\#include <stdint.h>\\ntypedef uint64_t u_int64_t;\\ntypedef uint16_t u_int16_t;\\ntypedef uint8_t u_int8_t;"  ./server_base/eosno/eosno_linux.go'
+                    sh """
+                    echo "FROM ncbase:v10
+                    ENV GO111MODULE=off
+                    COPY . /go/src/${Build_dir}
+                    WORKDIR /go/src/${Build_dir}/${GIT_NAME}
+                    RUN export GO111MODULE=off && make " > Dockerfile
+                    """
+                    sh "docker build -t ${Image_Name} . "
+                }
+            }
+        }
+
+        stage('制成品') {
+            steps {
+                dir(Dir_Name) {
+                    sh """
+                    echo "FROM  ${Image_Name}  as build
+                    FROM alpine:3.11
+                    COPY --from=build /go/src/${Build_dir}/${GIT_NAME}/ /app/${GIT_NAME}
+                    RUN apk add tzdata curl
+                    RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+                    WORKDIR /app/${GIT_NAME}/bin/
+                    CMD \"./${binary}\"" > Dockerfile
+                    """
+                    sh "docker build -t ${aws_container_addr}/${Deployenv}/${Git_name}:${currentTime} ."
+                    sh """
+                    echo "#!/bin/bash 
+                        /bin/aws ecr get-login --no-include-email | bash
+                         aws ecr create-repository --repository-name ${Deployenv}/${Git_name} || true" > createimg.sh
+                    bash createimg.sh
+                    """
+                    // RUN export http_proxy=http://192.168.1.99:1087;export https_proxy=http://192.168.1.99:1087; apk add tzdata curl
+                    sh "docker push ${aws_container_addr}/${Deployenv}/${Git_name}:${currentTime}"
+                }
+            }
+        }
+
+        stage("服务部署") {
+            steps {
+                dir(Dir_Name) {
+                    // if (Git_name == "qapple_merchant_pay") {
+                    //非常规命名
+                    // def deploy_name = "go-merchantpay-server"
+                    // }
+                    sh """
+                    echo "#!/bin/bash
+                    export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin:/home/ops/.local/bin:/home/ops/bin
+                    kubectl set image deploy ${deploy_name} *=${aws_container_addr}/${Deployenv}/${Git_name}:${currentTime}" > setimg.sh
+                    bash setimg.sh
+                    """
+                }
+            }
+        }
+    }
+    //DingDing
+    post {
+        always {
+            sh "docker rmi ${Image_Name}"
+            sh "docker rmi ${aws_container_addr}/${Deployenv}/${Git_name}:${currentTime}"
+            sh "rm -rf ${Dir_Name} ${Dir_Name}@tmp"
+        }
+        success {
+            echo "编译成功，可以浪了。"
+        }
+        failure {
+            echo "项目编译失败"
+            sh """
+            set - x
+            curl 'https://oapi.dingtalk.com/robot/send?access_token=cb062d050bf5c8ea9bfcd0ca2d5f17cb3d4a10b9215878e7dc4cf492c314c1a4' \
+                -H 'Content-Type: application/json' \
+                -d '{"msgtype": "text",
+                "text": {
+                "content": "接口自动化执行通知：
+                错误报告地址： ${JOB_URL}/${BUILD_NUMBER}/console"
+            }
+        }'
+        """
+    }
+}
+}

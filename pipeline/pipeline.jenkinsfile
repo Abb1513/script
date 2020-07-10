@@ -1,0 +1,58 @@
+pipeline {
+    // 指定dev 环境 agent
+    agent { label "hz"}
+    options { timestamps() }
+    environment{
+        def branch = "${params.branch_tag}"
+        def git_url = "{{giturl}}"
+        def service_name = "{{service_name}}"
+        def dockerRegistryUrl = ""
+        def imageName = "${dockerRegistryUrl}/xxx:xxx"
+    }
+
+    stages {
+        // 代码拉取
+        stage("Git clone"){
+            steps {
+            git branch: "${branch}", credentialsId: 'git', url: "${git_url}"
+            }
+        }
+        // mvn 构建
+        stage("Maven Build"){
+            steps{
+            sh "mvn clean package -Dfile=target/{service_name}.jar  -Dmaven.test.skip=true"
+            }
+        }
+
+        // docker 镜像封装构建
+        stage("docker build"){
+            steps{
+                // cp java 基础dockerfile 封装
+                sh  "cp /ops/java  ."
+                withDockerRegistry(credentialsId: 'd145e9b9-2a0e-4cb2-ac21-9635ad042194', url: 'https://docker.hub.com'){
+                    docker.build(imageName).push()
+                }
+            }
+            // 删除镜像，减少空间占用
+            post {
+                always{
+                    sh "docker rmi ${Image_Name}"
+                }
+            }
+        }
+
+        // 部署
+        stage("Deploy "){
+            // ssh  or  docker
+            sh "ansible ${host} -m copy 'src=./targer/${server_name}.jar dest=/app/deploy/${service_name}/'"
+            sh "ansible ${host} -m shell -a '/etc/init.d/${service_name} restart' "
+        }
+    }
+    // 回调钩子
+    post {
+        failure {
+            // 失败时， 回调钩子
+            echo "i'am failure "
+        }
+    }
+}

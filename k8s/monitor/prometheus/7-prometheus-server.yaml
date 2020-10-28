@@ -1,0 +1,203 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: kubestar-prometheus-server
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubestar-prometheus-server
+  namespace: kubestar-monitor
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kubestar-prometheus-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubestar-prometheus-server
+subjects:
+- kind: ServiceAccount
+  name: kubestar-prometheus-server
+  namespace: kubestar-monitor
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus-server
+  namespace: kubestar-monitor
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9090
+    targetPort: 9090
+  selector:
+    app: prometheus-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+  name: prometheus-server-headless
+  namespace: kubestar-monitor
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: prometheus-server
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: prometheus-server
+  name: prometheus-server
+  namespace: kubestar-monitor
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: prometheus-server
+  serviceName: prometheus-server-headless
+  template:
+    metadata:
+      labels:
+        app: prometheus-server
+    spec:
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #       - matchExpressions:
+      #         - key: role
+      #           operator: In
+      #           values:
+      #           - common
+      containers:
+      - args:
+        - --volume-dir=/etc/config
+        - --webhook-url=http://localhost:9090/-/reload
+        - --webhook-method=POST
+        image: jimmidyson/configmap-reload:v0.2.2
+        imagePullPolicy: IfNotPresent
+        name: prometheus-server-configmap-reload
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - name: cm-prometheus-config
+          mountPath: /etc/config
+          readOnly: true
+        # - mountPath: /dataI
+        #   name: storage-volume
+      - args:
+        - --storage.tsdb.retention.time=15d
+        - --config.file=/etc/config/prometheus.yml
+        - --storage.tsdb.path=/data
+        - --web.console.libraries=/etc/prometheus/console_libraries
+        - --web.console.templates=/etc/prometheus/consoles
+        - --web.enable-lifecycle
+        image: prom/prometheus:v2.18.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/healthy
+            port: 9090
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 30
+        name: prometheus-server
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/ready
+            port: 9090
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 30
+        resources:
+          limits:
+            cpu: 1024m
+            memory: 1Gi
+          requests:
+            cpu: 1024m
+            memory: 1Gi
+        volumeMounts:
+        - name: cm-prometheus-config
+          mountPath: /etc/config
+          readOnly: true
+        - name: nfs-volume
+          mountPath: /data/
+        - mountPath: /etc/config
+          name: cm-prometheus-config
+          readOnly: true
+        - mountPath: /etc/prometheus/k8s-etcd-certs
+          name: secret-kube-etcd-certs
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+         fsGroup: 65534
+         runAsGroup: 65534
+         runAsNonRoot: true
+         runAsUser: 65534
+      serviceAccount: kubestar-prometheus-server
+      serviceAccountName: kubestar-prometheus-server
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - name: secret-kube-etcd-certs
+        secret:
+          defaultMode: 420
+          secretName: kube-etcd-certs
+      - name: nfs-volume
+        nfs:
+          server: master-1
+          path: "/data/prometheus"
+      - configMap:
+          name: prometheus-config
+        name: cm-prometheus-config
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  # volumeClaimTemplates:
+  # - metadata:
+  #     name: storage-volume
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1000Gi
+  #     storageClassName: gp2
+  #     volumeMode: Filesystem

@@ -1,19 +1,19 @@
 #!/bin/bash
 # author wangcq
 
-ntp_server=ntp.aliyun.com  
+# ntp_server=ntp.aliyun.com
 ssh_port=22
 ansible_key=http://
-defult_user=ops
-MASTER="salt.prod" # salt-master
+#defult_user=ops
+# MASTER="salt.prod" # salt-master
 
 # yum源配置
-yum install -y wget 
-mv /etc/yum.repos.d/CentOS-Base.repo  /etc/yum.repos.d/CentOS-Base.repo.backup 
-wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
-yum clean all
-yum makecache
-yum install -y epel-release
+# yum install -y wget
+# mv /etc/yum.repos.d/CentOS-Base.repo  /etc/yum.repos.d/CentOS-Base.repo.backup
+# wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+# yum clean all
+# yum makecache
+# yum install -y epel-release
 
 # 常用软件安装
 yum install -y ntp wget tree telnet sysstat sysstat iptraf ncurses-devel openssl-devel zlib-devel  nmap screen vim
@@ -25,8 +25,8 @@ yum install epel-release  bash-completion   -y
 localectl set-locale LANG=en_US.utf8
 
 # shell 路径显示方式更改
-# echo 'export PS1="[ \033[01;33m\u\033[0;36m@\033[01;34m\h \033[01;31m\w\033[0m ]\033[0m \n#"' >> /etc/profile
-# source /etc/profile
+echo 'export PS1="[ \033[01;33m\u\033[0;36m@\033[01;34m\h \033[01;31m\w\033[0m ]\033[0m \n#"' >> /etc/profile
+source /etc/profile
 
 # sysctl调整
 cat >> /etc/sysctl.conf << EOF
@@ -50,7 +50,7 @@ cat >> /etc/security/limits.conf << EOF
 EOF
 
 # 系统用户初始化
-useradd ${defult_user} -u 2019
+useradd ${defult_user} -u 2020
 echo '${defult_user}' | passwd --stdin hwb && history -c 
 #set sudo authority
 echo "" >> /etc/sudoers
@@ -73,8 +73,9 @@ sed -i 's%#PermitEmptyPasswords no%PermitEmptyPasswords no%g' /etc/ssh/sshd_conf
 #sed -i 's%#Port 22%Port ${ssh_port}%g' /etc/ssh/sshd_config
 
 # 时间同步
-echo "* 4 * * * /usr/sbin/ntpdate ${ntp_server}> /dev/null 2>&1" >> /var/spool/cron/root
-
+#echo "* 4 * * * /usr/sbin/ntpdate ${ntp_server}> /dev/null 2>&1" >> /var/spool/cron/root
+# 设置时区 UTC
+timedatectl set-timezone UTC
 # seliunx 
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
@@ -84,11 +85,11 @@ wget ${ansible_key}-O /tmp/ansible_key
 cat /tmp/ansible_key >> /home/root/.ssh/authorized_keys
 rm -f /tmp/ansible_key
 # salt 安装
-yum install -y salt-minion
-IP=`ifconfig eth0 | grep "inet" | awk '{ print $2}'`
-
-echo "id: ${IP}" >> /etc/salt/minion
-echo "master: ${MASTER}" >> /etc/salt/minion
-systemctl start salt-minion
-systemctl enable salt-minion
+# yum install -y salt-minion
+# IP=`ifconfig eth0 | grep "inet" | awk '{ print $2}'`
+#
+# echo "id: ${IP}" >> /etc/salt/minion
+# echo "master: ${MASTER}" >> /etc/salt/minion
+# systemctl start salt-minion
+# systemctl enable salt-minion
 

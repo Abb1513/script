@@ -1,0 +1,159 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: cadvisor
+  name: kubestar-cadvisor
+  namespace: kubestar-monitor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: cadvisor
+  name: kubestar-cadvisor
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - cadvisor
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: cadvisor
+  name: kubestar-cadvisor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cadvisor
+subjects:
+- kind: ServiceAccount
+  name: kubestar-cadvisor
+  namespace: kubestar-monitor
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: cadvisor
+    name: cadvisor
+  name: cadvisor
+  namespace: kubestar-monitor
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: cadvisor
+    name: cadvisor
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cadvisor
+  name: cadvisor
+  namespace: kubestar-monitor
+spec:
+  selector:
+    matchLabels:
+      app: cadvisor
+      name: cadvisor
+  template:
+    metadata:
+      labels:
+        app: cadvisor
+        name: cadvisor
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - --housekeeping_interval=10s
+        - --max_housekeeping_interval=15s
+        - --event_storage_event_limit=default=0
+        - --event_storage_age_limit=default=0
+        - --disable_metrics=percpu,sched,udp,disk,diskIO,process
+        - --docker_only
+        - --store_container_labels=false
+        - --whitelisted_container_labels=io.kubernetes.container.name,io.kubernetes.pod.name,io.kubernetes.pod.namespace
+        image: ccr.ccs.tencentyun.com/mirrors/cadvisor:v0.34.0
+        name: cadvisor
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - mountPath: /rootfs
+          name: rootfs
+          readOnly: true
+        - mountPath: /var/run
+          name: var-run
+          readOnly: true
+        - mountPath: /sys
+          name: sys
+          readOnly: true
+        - mountPath: /var/lib/docker
+          name: docker
+          readOnly: true
+        - mountPath: /run
+          name: run
+      serviceAccountName: kubestar-cadvisor
+      serviceAccount: kubestar-cadvisor
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /
+        name: rootfs
+      - hostPath:
+          path: /var/run
+        name: var-run
+      - hostPath:
+          path: /run
+        name: run
+      - hostPath:
+          path: /sys
+        name: sys
+      - hostPath:
+          path: /var/lib/docker
+        name: docker
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  labels:
+    app: cadvisor
+  name: kubestar-cadvisor
+  namespace: kubestar-monitor
+spec:
+  allowedHostPaths:
+  - pathPrefix: /
+  - pathPrefix: /var/run
+  - pathPrefix: /sys
+  - pathPrefix: /var/lib/docker
+  fsGroup:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - '*'
+

@@ -1,0 +1,468 @@
+apiVersion: v1
+data:
+  base-alerting-rule.yml: |
+    groups:
+  base-recording-rule.yml: |
+    groups:
+    - name: namespace.applications
+      rules:
+      - record: namespace:deployment_pods
+        expr: |
+          label_join(kube_pod_owner{owner_kind="ReplicaSet"},  "replicaset", ",", "owner_name") * on(namespace, replicaset)  group_left(owner_name,owner_kind) kube_replicaset_owner{owner_kind="Deployment"}
+      - record: namespace:statefulset_pods
+        expr: |
+          kube_pod_owner{owner_kind="StatefulSet"}
+      - record: namespace:cronjob_pods
+        expr: |
+          label_join(kube_pod_owner{owner_kind="Job"},"job_name",",","owner_name") * on(job_name) group_left(owner_kind, owner_name) kube_job_owner{owner_kind="CronJob"}
+      - record: namespace:daemonset_pods
+        expr: |
+          kube_pod_owner{owner_kind="DaemonSet"}
+      ### deployments
+      - record: namespace:deployment_limits_memory_bytes:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (label_join(kube_pod_owner{owner_kind="ReplicaSet"},  "replicaset", ",", "owner_name") * on(namespace, replicaset)  group_left(owner_name,owner_kind) kube_replicaset_owner{owner_kind="Deployment"} * on(namespace,pod) group_left() sum(kube_pod_container_resource_limits_memory_bytes{}) by (namespace,pod))
+      - record: namespace:deployment_limits_cpu_cores:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (label_join(kube_pod_owner{owner_kind="ReplicaSet"},  "replicaset", ",", "owner_name") * on(namespace, replicaset)  group_left(owner_name,owner_kind) kube_replicaset_owner{owner_kind="Deployment"} * on(namespace,pod) group_left() sum(kube_pod_container_resource_limits_cpu_cores{}) by (namespace,pod))
+      ### sts
+      - record: namespace:statefulset_limits_memory_bytes:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (kube_pod_owner{owner_kind="StatefulSet"} * on(namespace,pod) group_right(owner_name,owner_kind) (sum (kube_pod_container_resource_limits_memory_bytes{}) by (namespace,pod)))
+      - record: namespace:statefulset_limits_cpu_cores:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (kube_pod_owner{owner_kind="StatefulSet"} * on(namespace,pod) group_right(owner_name,owner_kind) (sum (kube_pod_container_resource_limits_cpu_cores{}) by (namespace,pod)))
+      ### cronjob
+      - record: namespace:cronjob_limits_memory_bytes:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (label_join(kube_pod_owner{owner_kind="Job"},"job_name",",","owner_name") * on(job_name) group_left(owner_kind, owner_name) kube_job_owner{owner_kind="CronJob"} * on(namespace,pod) group_right(owner_name,owner_kind) (sum (kube_pod_container_resource_limits_memory_bytes{} unless on(namespace,pod) kube_pod_completion_time{}) by (namespace,pod)))
+      - record: namespace:cronjob_limits_cpu_cores:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (label_join(kube_pod_owner{owner_kind="Job"},"job_name",",","owner_name") * on(job_name) group_left(owner_kind, owner_name) kube_job_owner{owner_kind="CronJob"} * on(namespace,pod) group_right(owner_name,owner_kind) (sum (kube_pod_container_resource_limits_cpu_cores{} unless on(namespace,pod) kube_pod_completion_time{}) by (namespace,pod)))
+      ### daemonset
+      - record: namespace:daemonset_limits_memory_bytes:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (kube_pod_owner{owner_kind="DaemonSet"} * on(namespace,pod) group_left() (sum (kube_pod_container_resource_limits_memory_bytes{}) by (namespace,pod)))
+      - record: namespace:daemonset_limits_cpu_cores:list
+        expr: |
+          sum by (namespace, owner_kind, owner_name) (kube_pod_owner{owner_kind="DaemonSet"} * on(namespace,pod) group_left() (sum (kube_pod_container_resource_limits_cpu_cores{}) by (namespace,pod)))
+    - name: namespaces
+      rules:
+      - record: namespace:limits_cpu_cores:sort_desc
+        expr: |
+          sort_desc(sum (kube_pod_container_resource_limits_cpu_cores{} unless on(namespace,pod) kube_pod_completion_time{}) by (namespace))
+      - record:  namespace:limits_memory_bytes:sort_desc
+        expr: |
+          sort_desc(sum (kube_pod_container_resource_limits_memory_bytes{} unless on(namespace,pod) kube_pod_completion_time{}) by (namespace))
+  bc-alerting-rule.yml: |
+    groups:
+  bc-recording-rule.yml: |
+    groups:
+  prometheus.yml: |
+    global:
+      scrape_interval:     1m
+      evaluation_interval: 15s
+    rule_files:
+     #  - /etc/config/base-recording-rule.yml
+    - /etc/config/base-alerting-rule.yml
+    # business configs
+    - /etc/config/bc-recording-rule.yml
+    - /etc/config/bc-alerting-rule.yml
+    alerting:
+      alertmanagers:
+        - static_configs:
+          - targets: ["alertmanager.kubestar-monitor"]
+    scrape_configs:
+    - job_name: prometheus-server
+      honor_labels: false
+      static_configs:
+        - targets: ["localhost:9090"]
+    # 节点监控(node-exporter,cadvisor,kubelet)
+    - job_name: node-exporter
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kubestar-monitor
+      scheme: http
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_pod_controller_kind
+        - __meta_kubernetes_pod_controller_name
+        regex: DaemonSet;node-exporter
+        action: keep
+      - source_labels:
+        - __meta_kubernetes_endpoint_node_name
+        target_label: node
+        replacement: ${1}
+    - job_name: app-jvm
+      metrics_path: /
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names:
+          - default
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: 'true'
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+    #  - action: labelmap
+    #    regex: __meta_kubernetes_service_annotation_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_pod_name
+      - source_labels: [__meta_kubernetes_service_node_name]
+        action: replace
+        target_label: kubernetes_pod_node_name
+     # k8s-etcd 监控
+    - job_name: kube-etcd
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kube-system
+      scheme: https
+      tls_config:
+        ca_file: /etc/prometheus/k8s-etcd-certs/ca.pem
+        cert_file: /etc/prometheus/k8s-etcd-certs/kubernetes.pem
+        key_file: /etc/prometheus/k8s-etcd-certs/kubernetes-key.pem
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        regex: kube-etcd
+        action: keep
+    - job_name: kube-scheduler
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kube-system
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        regex: kube-scheduler
+        action: keep
+    - job_name: kube-controller-manager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kube-system
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        regex: kube-controller-manager
+        action: keep
+    - job_name: kube-proxy
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kube-system
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        regex: kube-proxy
+        action: keep
+    - job_name: standard-cadvisor
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kubestar-monitor
+      scheme: http
+      relabel_configs:
+      - action: keep
+        source_labels:
+        - __meta_kubernetes_service_label_name
+        regex: cadvisor
+      - action: keep
+        source_labels:
+        - __meta_kubernetes_endpoint_port_name
+        regex: http
+      - source_labels:
+        - __meta_kubernetes_endpoint_address_target_kind
+        - __meta_kubernetes_endpoint_address_target_name
+        separator: ;
+        regex: Pod;(.*)
+        replacement: ${1}
+        target_label: pod
+      - source_labels:
+        - __meta_kubernetes_endpoint_node_name
+        target_label: node
+        replacement: ${1}
+      metric_relabel_configs:
+      - source_labels: [ __name__ ]
+        regex: 'container_network_tcp_usage_total'
+        action: keep
+      - source_labels:
+        - container_label_io_kubernetes_pod_name
+        target_label: pod
+      - source_labels:
+        - container_label_io_kubernetes_container_name
+        target_label: container
+      - source_labels:
+        - container_label_io_kubernetes_pod_namespace
+        target_label: namespace
+      - regex: container_label_io_kubernetes_pod_namespace
+        action: labeldrop
+      - regex: container_label_io_kubernetes_container_name
+        action: labeldrop
+      - regex: container_label_io_kubernetes_pod_name
+        action: labeldrop
+    - job_name: cadvisor
+      honor_timestamps: true
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: https
+      kubernetes_sd_configs:
+      - role: node
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - replacement: kubernetes.default.svc:443
+        target_label: __address__
+      - regex: (.+)
+        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+        source_labels:
+        - __meta_kubernetes_node_name
+        target_label: __metrics_path__
+      metric_relabel_configs:
+      - regex: pod_name
+        action: labeldrop
+      - regex: container_name
+        action: labeldrop
+      - source_labels:
+        - instance
+        target_label: node
+    - job_name: kubelet
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - replacement: kubernetes.default.svc:443
+        target_label: __address__
+      - regex: (.+)
+        replacement: /api/v1/nodes/$1/proxy/metrics
+        source_labels:
+        - __meta_kubernetes_node_name
+        target_label: __metrics_path__
+      - source_labels:
+        - instance
+        target_label: node
+    #  kubernetes 元数据采集
+    - job_name: kube-state-metrics
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kubestar-monitor
+      scheme: http
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        regex: kube-state-metrics
+        action: keep
+    # kubernetes master 组件监控
+    - job_name: kube-dns
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - kube-system
+      scheme: http
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_pod_container_port_number
+        regex: kube-dns;9153
+        action: keep
+    - job_name: kube-apiserver
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        source_labels:
+        - __meta_kubernetes_namespace
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: default;kubernetes;https
+    - job_name: kube-services-whitebox
+      metrics_path: /metric
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      # service 指定 prometheus.io/http_metric=true  才能做服务发现
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_http_metric]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace, __meta_kubernetes_service_annotation_prometheus_io_http_metric_port]
+        action: replace
+        target_label: instance
+        regex: (.+);(.+);(.+)
+        replacement: $1.$2:$3
+      - target_label: __address__
+        source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace, __meta_kubernetes_service_annotation_prometheus_io_http_metric_port]
+        action: replace
+        regex: (.+);(.+);(.+)
+        replacement: $1.$2:$3
+      - target_label: __scheme__
+        source_labels: [__meta_kubernetes_service_annotation_prometheus_io_http_metric_scheme]
+      - target_label: __metrics_path__
+        source_labels: [__meta_kubernetes_service_annotation_prometheus_io_http_metric_path]
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        target_label: name
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_http_metric_params_(.*)
+        replacement: __param_${1}
+    # dns blackbox config
+    - job_name: kube-tcp-blackbox
+      metrics_path: /probe
+      params:
+        module: [tcp_connect]
+      static_configs:
+      - targets:
+          - 10.53.32.67:8848
+          - 10.53.167.9:8848
+          - 10.53.174.135:8848
+      relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: blackbox:9115
+    - job_name: kube-dns-blackbox
+      metrics_path: /probe
+      params:
+        module: [dns]
+      static_configs:
+      - targets:
+        - kube-dns.kube-system:53
+      relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+    # kubernetes service blackbox
+    - job_name: kube-services-blackbox
+      metrics_path: /probe
+      params:
+        module: [http_2xx] # 使用get模块,且返回200
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      # service 指定 prometheus.io/http_probe=true  才能做服务发现
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_http_probe]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace, __meta_kubernetes_service_annotation_prometheus_io_http_probe_port, __meta_kubernetes_service_annotation_prometheus_io_http_probe_path]
+        action: replace
+        target_label: __param_target
+        regex: (.+);(.+);(.+);(.+)
+        replacement: $1.$2:$3$4
+      - target_label: __address__
+        replacement: blackbox:9115
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        target_label: name
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_http_probe_params_(.*)
+        replacement: __param_${1}
+      # kubernetes ingress blackbox
+    - job_name: kube-ingresses-blackbox
+      metrics_path: /probe
+      params:
+        module: [http_2xx]
+      kubernetes_sd_configs:
+      - role: ingress  # ingress type
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_ingress_annotation_prometheus_io_http_probe]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_ingress_scheme,__address__,__meta_kubernetes_ingress_path]
+        regex: (.+);(.+);(.+)
+        replacement: ${1}://${2}${3}
+        target_label: __param_target
+      - target_label: __address__
+        replacement: blackbox:9115
+      - source_labels: [__param_target]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_ingress_annotation_prometheus_io_http_probe_params_(.*)
+        replacement: __param_${1} 
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_ingress_name]
+        target_label: name
+kind: ConfigMap
+metadata:
+  annotations:
+  labels:
+    app: prometheus-server
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:data:
+        .: {}
+        f:base-alerting-rule.yml: {}
+        f:base-recording-rule.yml: {}
+        f:bc-alerting-rule.yml: {}
+        f:bc-recording-rule.yml: {}
+        f:prometheus.yml: {}
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:app: {}
+    manager: kubectl
+    operation: Update
+  name: prometheus-config
+  namespace: kubestar-monitor

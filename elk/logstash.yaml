@@ -1,0 +1,106 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: logstash
+  namespace: logging
+data:
+  logstash.conf: |
+    input {
+          beats {
+            port => "5044"
+        }
+    }
+    filter {
+      grok {
+    #    match => ["message","(?<Log_produce_time>%{YEAR}-%{MONTHNUM}-%{MONTHDAY} %{TIME})\s+%{LOGLEVEL:log_level}\s+(?<log_message>.*)"]
+        match => ["message","(?<log_produce_time>%{YEAR}-%{MONTHNUM}-%{MONTHDAY} %{TIME})\s+(?<class>\[.*\])\s+%{LOGLEVEL:log_level}\s+(?<log_message>.*)"]
+       }
+     mutate {
+            split => ["source", "|"]
+            add_field => {
+                      "service_name" => "%{[source][3]}"
+            }
+        }
+    # ruby {
+    #   code => '
+    #   arr = event.get("source").split("/")
+    #   event.set("service_name", arr[3])
+    #   '
+    # }
+    #date {
+    #   match => ["Log_produce_time", "yyyy-MM-dd HH:mm:ss"]
+    #}
+      mutate {
+         remove_field => ["message", "input", "offset","beat","prospector","tags","class","log"]
+    #        add_field => {
+    #          host_ip => "10.0.1.48"
+    #        }
+       }
+    }
+    output {
+        if [service_name] == "fuse-sso-vn" {
+        stdout {
+        codec => rubydebug
+     }
+    }
+    #elasticsearch {
+    #  hosts => ["10.53.53.75:9200"]
+    #  index => "%{service_name}-%{+YYYY.MM}"
+    #    }
+    }
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    app: logstash
+  name: logstash
+  namespace: logging
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+        - name: logstash
+          image: docker.elastic.co/logstash/logstash:7.9.2
+          args:
+            - "--config.reload.automatic"
+          volumeMounts:
+            - mountPath: /usr/share/logstash/pipeline/logstash.conf
+              name: logstash-conf-volume
+          ports:
+            - containerPort: 5044
+              protocol: TCP
+          env:
+            - name: "XPACK_MONITORING_ELASTICSEARCH_URL"
+              value: "http://10.53.53.75:9200"
+          securityContext:
+            privileged: true
+      volumes:
+        - name: logstash-conf-volume
+          configMap:
+            name: logstash
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: logstash
+  name: logstash-service
+  namespace: logging
+spec:
+  ports:
+    - port: 5044
+      targetPort: 5044
+  selector:
+    app: logstash
+  type: NodePort

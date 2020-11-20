@@ -2,13 +2,13 @@
 # tasks file for mysql
 #- name: Down Mysql tar
 #  get_url: 
-#    url: http://mirrors.163.com/mysql/Downloads/MySQL-5.7/mysql-5.7.27-el7-x86_64.tar.gz
+#    url: https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.26-el7-x86_64.tar
 #    dest: /tmp
 #    force: no
 
 - name: unarchive tar
   unarchive:
-    src: /tmp/mysql-5.7.27-el7-x86_64.tar.gz
+    src: /tmp/mysql-5.7.26-el7-x86_64.tar
     dest: /tmp/
     copy: yes
 

@@ -1,7 +1,7 @@
 ---
 # defaults file for mysql
 #  安装路径
-install_path: /app/software/mysql
+install_path: /usr/local/mysql_57
 
 # 数据存储路径
 data_path: /data/mysql

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: blackbox-config
-  namespace: kubestar-monitor
+  namespace: monitor
 data:
   blackbox.yml: |-
     modules:
@@ -35,7 +35,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: blackbox
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   selector:
     matchLabels:
@@ -91,7 +91,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: blackbox
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   selector:
     app: blackbox

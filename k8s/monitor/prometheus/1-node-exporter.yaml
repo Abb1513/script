@@ -4,7 +4,7 @@ metadata:
   labels:
     app: node-exporter
   name: node-exporter
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   ports:
   - name: http
@@ -20,7 +20,7 @@ metadata:
   labels:
     app: node-exporter
   name: node-exporter
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   revisionHistoryLimit: 10
   selector:

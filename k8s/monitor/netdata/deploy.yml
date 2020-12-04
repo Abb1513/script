@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kubestar-monitor
+  name: monitor
 ---
 # netdata 在 kubernetes 中需要的权限配置
 apiVersion: v1
@@ -11,7 +11,7 @@ metadata:
   labels:
     app: netdata
   name: netdata
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -76,7 +76,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: netdata
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -91,7 +91,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: netdata
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -152,7 +152,7 @@ metadata:
   labels:
     app: netdata
   name: netdata-conf-master
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -161,7 +161,7 @@ metadata:
     app: netdata
     role: master
   name: netdata-master
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1
@@ -289,7 +289,7 @@ metadata:
     app: netdata
     role: master
   name: netdata
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   ports:
   - name: http
@@ -342,7 +342,7 @@ metadata:
   labels:
     app: netdata-conf-slave
   name: netdata-conf-slave
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
@@ -351,7 +351,7 @@ metadata:
     app: netdata
     role: slave
   name: netdata-slave
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   revisionHistoryLimit: 10
   selector:

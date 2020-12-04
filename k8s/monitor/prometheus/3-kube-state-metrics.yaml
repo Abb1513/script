@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: kube-state-metrics
   name: kubestar-kube-state-metrics
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -20,7 +20,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: kubestar-kube-state-metrics
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -146,7 +146,7 @@ metadata:
   labels:
     app.kubernetes.io/name: kube-state-metrics
   name: kube-state-metrics
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   clusterIP: None
   ports:
@@ -165,7 +165,7 @@ metadata:
   labels:
     app.kubernetes.io/name: kube-state-metrics
   name: kube-state-metrics
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   replicas: 1
   selector:

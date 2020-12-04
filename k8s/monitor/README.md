@@ -1,4 +1,4 @@
-# kubestar-monitor
+# monitor
 一站式监控说明
 
 此文档为监控的配置, 部署文档, 监控系统包括:
@@ -24,7 +24,7 @@
     9. kube-schduler
     10. kube-etcd
 7. job 不得越权采集其他 job 的任务指标, 否则可能导致指标重复,且边界模糊
-8. 默认情况下, prometheus 监控部署在 `kubestar-monitor` 命名空间下
+8. 默认情况下, prometheus 监控部署在 `monitor` 命名空间下
 9. 此配置仅部署 prometheus server 及其采集端点, 并不会部署 grafana 等视图应用
 10. 此监控的 rbac 配置(例如: `ServiceAccount`,`ClusterRole`,`ClusterRoleBinding` 均会添加额外标识: `kubestar`,避免和现有集群中配置复用和冲突导致误删, 请放心使用)
 11. 采集端点需要额外部署时, 必须指定 requeset, limit(当前为最小资源配额原则)。 
@@ -119,4 +119,4 @@ annotation:
 
 1. alertmanager 需要和 kubestar (管理平台) 部署到同一个 kubernetes 集群
 2. 当kubestar 管理多套集群时, 只需要部署一套alertmanager(位置如 1 所说), 确保集群其他集群到管理集群的网络互通。
-3. alertmangaer 的内部服务域名为: `alertmanager.kubestar-monitor`,端口为:`80`
+3. alertmangaer 的内部服务域名为: `alertmanager.monitor`,端口为:`80`

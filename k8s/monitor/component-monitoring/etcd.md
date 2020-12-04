@@ -108,11 +108,11 @@ spec:
 ### 3. secret name 如果需要变动, 在 prometheus-server 挂载 secret 时也需要同时变更
 ### 4. 有些证书不是 .pem 而是 .crt, 按需动态调整
 
-kubectl -n kubestar-monitor create secret generic kube-etcd-certs --from-file=/etc/kubernetes/cert/ca.pem --from-file=/etc/kubernetes/cert/kubernetes.pem --from-file=/etc/kubernetes/cert/kubernetes-key.pem
+kubectl -n monitor create secret generic kube-etcd-certs --from-file=/etc/kubernetes/cert/ca.pem --from-file=/etc/kubernetes/cert/kubernetes.pem --from-file=/etc/kubernetes/cert/kubernetes-key.pem
 secret/kube-etcd-certs created
 ```
 #### 第三部分: 为 prometheus-server 挂载 etcd 证书并配置 etcd job
-8. 执行 `kubectl edit statefulset prometheus-server -n kubestar-monitor` 编辑 prometheus-server
+8. 执行 `kubectl edit statefulset prometheus-server -n monitor` 编辑 prometheus-server
 9. 修改的配置文件, 并确保`prometheus-server` 的pod 运行成功
 ```
         volumeMounts:

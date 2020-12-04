@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: grafana
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   accessModes:
   - ReadWriteOnce

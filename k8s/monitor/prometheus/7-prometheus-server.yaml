@@ -15,7 +15,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kubestar-prometheus-server
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -28,13 +28,13 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: kubestar-prometheus-server
-  namespace: kubestar-monitor
+  namespace: monitor
 ---
 kind: Service
 apiVersion: v1
 metadata:
   name: prometheus-server
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   type: LoadBalancer
   ports:
@@ -48,7 +48,7 @@ kind: Service
 metadata:
   labels:
   name: prometheus-server-headless
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   clusterIP: None
   ports:
@@ -67,7 +67,7 @@ metadata:
   labels:
     app: prometheus-server
   name: prometheus-server
-  namespace: kubestar-monitor
+  namespace: monitor
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1
@@ -146,20 +146,17 @@ spec:
           timeoutSeconds: 30
         resources:
           limits:
-            cpu: 1024m
-            memory: 1Gi
+      #      cpu: 500m
+            memory: 400Mi
           requests:
-            cpu: 1024m
-            memory: 1Gi
+            cpu: 50m
+            memory: 100Mi
         volumeMounts:
         - name: cm-prometheus-config
           mountPath: /etc/config
           readOnly: true
         - name: nfs-volume
           mountPath: /data/
-        - mountPath: /etc/config
-          name: cm-prometheus-config
-          readOnly: true
         - mountPath: /etc/prometheus/k8s-etcd-certs
           name: secret-kube-etcd-certs
           readOnly: true

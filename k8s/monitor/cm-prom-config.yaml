@@ -71,7 +71,7 @@ data:
     alerting:
       alertmanagers:
         - static_configs:
-          - targets: ["alertmanager.kubestar-monitor"]
+          - targets: ["alertmanager.monitor"]
     scrape_configs:
     - job_name: prometheus-server
       honor_labels: false
@@ -84,7 +84,7 @@ data:
       - role: endpoints
         namespaces:
           names:
-          - kubestar-monitor
+          - monitor
       scheme: http
       relabel_configs:
       - source_labels:
@@ -189,7 +189,7 @@ data:
       - role: endpoints
         namespaces:
           names:
-          - kubestar-monitor
+          - monitor
       scheme: http
       relabel_configs:
       - action: keep
@@ -287,7 +287,7 @@ data:
       - role: endpoints
         namespaces:
           names:
-          - kubestar-monitor
+          - monitor
       scheme: http
       relabel_configs:
       - source_labels:
@@ -465,4 +465,4 @@ metadata:
     manager: kubectl
     operation: Update
   name: prometheus-config
-  namespace: kubestar-monitor
+  namespace: monitor

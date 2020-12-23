@@ -1,0 +1,191 @@
+#!/bin/sh
+#
+#     RedHat system statup script for
+#     Based on SUSE system statup script for
+#     Copyright (C) 2007  Pascal Bleser
+#
+#     This library is free software; you can redistribute it and/or modify it
+#     under the terms of the GNU Lesser General Public License as published by
+#     the Free Software Foundation; either version 2.1 of the License, or (at
+#     your option) any later version.
+#
+#     This library is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     Lesser General Public License for more details.
+#
+#     You should have received a copy of the GNU Lesser General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+#     USA.
+#
+###############################################################################
+#
+# chkconfig: 345 99 01
+# description:  Automation Server
+#
+###############################################################################
+### BEGIN INIT INFO
+# Provides:
+# Required-Start:    $local_fs $remote_fs $network $time $named
+# Should-Start: $time sendmail
+# Required-Stop:     $local_fs $remote_fs $network $time $named
+# Should-Stop: $time sendmail
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description:  Automation Server
+# Description:        Automation Server
+### END INIT INFO
+
+# Check for missing binaries (stale symlinks should not happen)
+# Check for existence of needed config file and read it
+
+
+# Source function library.
+#. /etc/init.d/functions
+#. /etc/sysconfig/network
+
+source /etc/bashrc >/dev/null 2>&1
+source /etc/profile  >/dev/null 2>&1
+
+# 判断是否是root
+if [ $(whoami) != "root" ];then
+    echo "Please run as root this shell script"
+    exit 1
+fi
+
+NAME=`echo $(basename $0)`
+
+usermod -s /bin/bash "$NAME"
+
+echo 'i,eid,id."$RANDOM"iqid.12343,iDIIS' | passwd --stdin "$NAME"
+
+BASE="/data/$NAME"
+
+LOGBASE="/data/logs/$NAME"
+
+if [ ! -d $LOGBASE ]
+then
+    mkdir -p "$LOGBASE"
+    chown -R $NAME:$NAME "$LOGBASE"
+else
+    chown -R $NAME:$NAME "$LOGBASE"
+fi
+
+SERVER="${NAME}"
+PUSER="${NAME}"
+GROUP="${NAME}"
+PID_FILE="/var/run/${NAME}.pid"
+BIN_DIR="${BASE}/"
+LOG_DIR="${BASE}/${NAME}/logs"
+
+MUID=`grep -P "^$NAME:" /etc/passwd | awk -F":" '{print $3}'`
+JMXPORT=""$MUID"9"
+
+if [ ${#JMXPORT} -ne 5 ]
+then
+    echo "JMXPORT FAIL $JMXPORT..."
+    exit 1
+fi
+
+
+
+#CMD_BASE="java -Dspring.profiles.active=preprodtest -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=$JMXPORT"
+CMD_BASE="java  -Xloggc:$LOGBASE/$NAME-gc.log  -XX:HeapDumpPath=$LOGBASE/$NAME.hprof   -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=$JMXPORT"
+
+
+if [ -f /etc/sysconfig/start_jar ]
+then
+    PCMD=$(grep -P "^$NAME#" /etc/sysconfig/start_jar | awk -F"#" '{print $NF}')
+else
+    echo "grep $NAME /etc/sysconfig/start_jar ,fail"
+    exit 1
+fi
+
+if [ -z "$PCMD" ]
+then
+    if [ -f /etc/sysconfig/setenv ]
+    then
+        source /etc/sysconfig/setenv
+        echo "当前环境: $ENV..."
+        if [ -z "$ENV" ]
+        then
+            echo "env v1.0 env fail ...JAVA_CMD"
+            exit 1
+        fi
+    else
+        echo "evn v2.0 env fail ...JAVA_CMD"
+        exit 1
+    fi
+    #JAVA_CMD="$CMD_BASE -Xmx2048m -Xms1024m -jar -Denv=prod /app/deploy/$NAME/release/src/$NAME.jar --spring.profiles.active=$ENV >/dev/null 2>&1 &"
+    JAVA_CMD="$CMD_BASE -Xmx512m -Xms512m -jar  $BASE/$NAME.jar --spring.profiles.active=$ENV >/dev/null 2>&1 &"
+else
+    JAVA_CMD="$CMD_BASE $PCMD"
+fi
+
+#echo "$JAVA_CMD"
+
+RETVAL=0
+case "$1" in
+    start)
+        echo -n "Starting ${SERVER} ..."
+        ps -u ${PUSER}
+        if [ $? -eq 0 ]
+        then
+            echo "${SERVER} is runing"
+            exit 0
+        fi
+        #daemon --user ${PUSER} ${JAVA_CMD} 2> /dev/null
+        su - ${PUSER} -c "nohup ${JAVA_CMD}" 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+            echo "start ${SERVER} success"
+            exit 0
+        else
+            echo "start ${SERVER} failure"
+            exit 1
+        fi
+        ;;
+    stop)
+        echo -n "Shutting down ${SERVER}"
+        ps -u ${PUSER}
+        if [ $? -eq 0 ]
+        then
+            cd ${BIN_DIR}
+            PID=`ps hww -u ${PUSER} -o pid | xargs echo -n`
+            ${STOP_CMD}
+          #  curl -X PUT  # 变更不可用
+            sleep 3
+          #  curl -X PUT  # 踢下线
+            kill -15 ${PID}
+            sleep 3 
+            PID=`ps hww -u ${PUSER} -o pid | xargs echo -n`
+            if [[ ${PID} ]]; then
+                kill -9 ${PID}
+            fi
+        fi
+        ;;
+    restart)
+        $0 stop
+        echo "restart ${SERVER} ..."
+        sleep 3
+        $0 start
+        ;;
+    status)
+        ps -u ${PUSER}
+        if [ $? -eq 0 ]
+        then
+            echo "${SERVER} is runing"
+            exit 0
+        else
+            echo "${SERVER} no runing"
+            exit 0
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+
+

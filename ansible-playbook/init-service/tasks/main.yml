@@ -1,0 +1,8 @@
+
+- name: 初始化服务器
+  include: init-env.yaml
+  tags: init-env
+
+- name: 初始化服务
+  include: init-service.yaml
+  tags: init-service

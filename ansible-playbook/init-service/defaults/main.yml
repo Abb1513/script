@@ -1,0 +1,5 @@
+---
+# defaults file for init-service
+env: "staging"
+basePath: "/data"
+logbasePath: "/data/logs"

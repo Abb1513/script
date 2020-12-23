@@ -1,0 +1,42 @@
+---
+# tasks file for init-service
+- name: Add Group
+  group:
+    name: application
+    system: true
+
+- name: Add User
+  user:
+    name: "{{ username }}"
+    comment: "application {{ username }}"
+    groups: application
+    uid: "{{ uid }}"
+    append: yes
+
+- name: generate script
+  copy:
+    src: files/init
+    dest: "/etc/init.d/{{ username }}"
+
+- name: chmom +x
+  file:
+    dest: "/etc/init.d/{{ username }}"
+    mode: 0755
+    owner: root
+    group: root
+
+- file:
+    state: directory
+    path: "{{ basePath }}/{{ username }}"
+
+- lineinfile:
+    path: /etc/sysconfig/start_jar
+    line: "{{ command }}"
+  when: diy is defined
+
+- name: 添加开机自启
+  service:
+    enabled: yes
+    name: "{{ username }}"
+
+

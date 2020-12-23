@@ -1,0 +1,20 @@
+# 初始化 服务环境
+
+- name: 初始化变量
+  file:
+    state: touch
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: 0744
+  with_items:
+    - /etc/sysconfig/setenv
+    - /etc/sysconfig/start_jar
+  tags:
+    - init-ops
+- name: 设置环境
+  lineinfile:
+    dest: /etc/sysconfig/setenv
+    line: "export ENV={{ env }}"
+  tags:
+    - init-ops

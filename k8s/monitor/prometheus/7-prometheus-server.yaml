@@ -1,3 +1,16 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-db
+spec:
+  storageClassName: "managed-nfs-storage"
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
@@ -101,10 +114,10 @@ spec:
         resources:
           limits:
             cpu: 250m
-            memory: 512Mi
+            memory: 1Gi
           requests:
             cpu: 250m
-            memory: 512Mi
+            memory: 800Mi
         volumeMounts:
         - name: cm-prometheus-config
           mountPath: /etc/config
@@ -172,14 +185,17 @@ spec:
       serviceAccountName: kubestar-prometheus-server
       terminationGracePeriodSeconds: 300
       volumes:
+      - persistentVolumeClaim:
+          claimName: prometheus-db
+        name: nfs-volume
       - name: secret-kube-etcd-certs
         secret:
           defaultMode: 420
           secretName: kube-etcd-certs
-      - name: nfs-volume
-        nfs:
-          server: master-1
-          path: "/data/prometheus"
+#      - name: nfs-volume
+#        nfs:
+#          server: master
+#          path: "/data/prometheus"
       - configMap:
           name: prometheus-config
         name: cm-prometheus-config
@@ -187,14 +203,13 @@ spec:
     rollingUpdate:
       partition: 0
     type: RollingUpdate
-  # volumeClaimTemplates:
-  # - metadata:
-  #     name: storage-volume
-  #   spec:
-  #     accessModes:
-  #     - ReadWriteOnce
-  #     resources:
-  #       requests:
-  #         storage: 1000Gi
-  #     storageClassName: gp2
-  #     volumeMode: Filesystem
+  volumeClaimTemplates:
+   - metadata:
+       name: prometheus-db
+     spec:
+       accessModes:
+       - ReadWriteOnce
+       resources:
+         requests:
+           storage: 10Gi
+       storageClassName: managed-nfs-storage

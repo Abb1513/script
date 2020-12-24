@@ -1,8 +1,16 @@
 
+- name: Is user
+  shell: "id {{ username }}"
+  register: result
+  ignore_errors: true
+  tags: init-service
+
 - name: 初始化服务器
   include: init-env.yaml
   tags: init-env
 
+
 - name: 初始化服务
   include: init-service.yaml
   tags: init-service
+  when: result is failed

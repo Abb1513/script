@@ -1,6 +1,7 @@
 ---
 - hosts: localhost
   remote_user: vagrant
+  gather_facts: false
   become: yes
   roles:
     - init-service

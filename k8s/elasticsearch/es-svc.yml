@@ -1,0 +1,40 @@
+# cat es-svc-in.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: es-headless
+  namespace: logging
+  labels:
+    k8s-app: es
+spec:
+  selector:
+    k8s-app: es
+  clusterIP: None
+  ports:
+    - name: cluster
+      port: 9300
+      protocol: TCP
+    - name: port
+      port: 9200
+      protocol: TCP
+
+---
+
+# cat es-svc-out.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: es
+  namespace: es
+  labels:
+    k8s-app: es
+spec:
+  selector:
+    k8s-app: es
+  ports:
+    - name: cluster
+      port: 9300
+      protocol: TCP
+    - name: port
+      port: 9200
+      protocol: TCP

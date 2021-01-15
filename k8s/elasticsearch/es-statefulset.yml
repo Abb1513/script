@@ -1,0 +1,59 @@
+# es-statefulset.yml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: es
+  namespace: es
+  labels:
+    k8s-app: es
+spec:
+  replicas: 1
+  serviceName: es
+  selector:
+    matchLabels:
+      k8s-app: es
+  template:
+    metadata:
+      labels:
+        k8s-app: es
+    spec:
+      containers:
+        - name: es
+          image: elasticsearch:7.4.0
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1500Mi
+            requests:
+              cpu: '1'
+              memory: 1500Mi
+          volumeMounts:
+            - name: es-config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              subPath: elasticsearch.yml
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: es-config
+          configMap:
+            name: es
+  volumeClaimTemplates: #定义创建PVC使用的模板
+    - metadata:
+        name: data
+        annotations: #这是指定storageclass
+          volume.beta.kubernetes.io/storage-class: managed-nfs-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi

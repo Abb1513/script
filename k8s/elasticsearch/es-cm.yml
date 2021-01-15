@@ -1,0 +1,13 @@
+# cat es-cm.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: es
+  namespace: es
+data:
+  elasticsearch.yml: |
+    cluster.name: "${NAMESPACE}"
+    node.name: "${POD_NAME}"
+    network.host: 0.0.0.0
+    discovery.seed_hosts: "es-headless"
+    cluster.initial_master_nodes: "es-0"

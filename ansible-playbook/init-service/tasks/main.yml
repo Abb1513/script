@@ -14,3 +14,12 @@
   include: init-service.yaml
   tags: init-service
   when: result is failed
+
+- name: 生产NG Upstream all
+  template:
+    src: {{ item.src }}
+    dest: {{ item.dest }}
+  with_items:
+    - {"src":"templates/pool.conf.j2", "dest": "/data/script/template/pool.{{ service_name }}.conf.tpl"}
+    - {"src":"templates/pool.conf_01.j2", "dest": "/data/script/template/pool.{{ service_name }}.conf.close1.tpl"}
+    - {"src":"templates/pool.conf_02.j2", "dest": "/data/script/template/pool.{{ service_name }}.conf.close2.tpl"}

@@ -89,9 +89,9 @@ then
 fi
 
 
-
+STOP_CMD="curl -X PUT '${NACOS_URL}:8848/nacos/v1/ns/instance?serviceName=${NAME}&clusterName=DEFAULT&groupName=DEFAULT_GROUP&ip=${IP}&port=${PORT}&ephemeral=true&weight=1&enabled=false&namespaceId=${namespaceId}' "
 #CMD_BASE="java -Dspring.profiles.active=preprodtest -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=$JMXPORT"
-CMD_BASE="java  -Xloggc:$LOGBASE/$NAME-gc.log  -XX:HeapDumpPath=$LOGBASE/$NAME.hprof   -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=$JMXPORT"
+CMD_BASE="java  -Duser.timezone=GMT+00 -Xloggc:$LOGBASE/$NAME.gc  -XX:HeapDumpPath=$LOGBASE/$NAME.hprof   -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=$JMXPORT"
 
 
 if [ -f /etc/sysconfig/start_jar ]
@@ -155,7 +155,7 @@ case "$1" in
             PID=`ps hww -u ${PUSER} -o pid | xargs echo -n`
             ${STOP_CMD}
           #  curl -X PUT  # 变更不可用
-            sleep 3
+            sleep 30
           #  curl -X PUT  # 踢下线
             kill -15 ${PID}
             sleep 3 

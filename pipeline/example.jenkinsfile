@@ -1,0 +1,21 @@
+Here is sample snippet using the active choice plugin.
+
+def command = $/aws ec2 describe-instances \
+               --filters Name=tag:Name,Values=Test \
+               --query Reservations[*].Instances[*].PrivateIpAddress \
+               --output text /$
+def proc = command.execute()
+proc.waitFor()
+
+def output = proc.in.text
+def exitcode= proc.exitValue()
+def error = proc.err.text
+
+if (error) {
+    println "Std Err: ${error}"
+    println "Process exit code: ${exitcode}"
+    return exitcode
+}
+
+//println output.split()
+return output.tokenize()

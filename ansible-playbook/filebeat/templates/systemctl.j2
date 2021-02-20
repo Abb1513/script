@@ -1,0 +1,15 @@
+[Unit]
+Description=filebeat server daemon
+Documentation=/opt/local/filebeat/filebeat -help
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+Group=root
+Environment="BEAT_CONFIG_OPTS=-c /opt/local/filebeat/filebeat.yml"
+ExecStart=/opt/local/filebeat/filebeat $BEAT_CONFIG_OPTS
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

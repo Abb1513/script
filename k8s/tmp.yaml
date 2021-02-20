@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: static-nginx
+  labels:
+    name: fuse
+    app: static-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: static-nginx
+  template:
+    metadata:
+      labels:
+        app: static-nginx
+    spec:
+      imagePullSecrets:
+        - name: regsecret
+      containers:
+        - name: static-nginx
+          image: nginx:1.18.0
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 100Mi
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nfs-volume            #设置的名称，和下面的name要一样的
+              mountPath: /usr/share/nginx/html   #需要挂载的目录
+          #  subPath: newshomebg         #卷的子目录，也就是在nfs服务目录里生成这个子目录
+      volumes:
+        - name: nfs-volume              #这个卷的名称，和上面的name要一样的
+          nfs:                          #这里是nfs挂载
+            server: master         #nfs服务器的ip或者域名
+            path: "/data/static/"               #nfs服务配置的挂载目录
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: static-nginx
+  name: static-nginx
+spec:
+  selector:
+    app: static-nginx
+  ports:
+    - port: 80
+

@@ -66,6 +66,18 @@ annotation:
   prometheus.io/http-probe: "true"
   ### 可选,通常情况无需添加
   prometheus.io/http-probe-params-key: value
+
+#### black-exporter
+http探测：
+    prometheus.io/scrape: 'true'
+    prometheus.io/http-probe: 'true'
+    prometheus.io/http-probe-port: '8080'
+    prometheus.io/http-probe-path: '/healthz'
+ 
+tcp探测：
+    prometheus.io/scrape: 'true'
+    prometheus.io/tcp-probe: 'true'
+    prometheus.io/tcp-probe-port: '80'
 ```
 16. 如何为服务配置白盒监控
 ```

@@ -132,14 +132,16 @@ case "$1" in
         fi
         #daemon --user ${PUSER} ${JAVA_CMD} 2> /dev/null
         su - ${PUSER} -c "nohup ${JAVA_CMD}" 2> /dev/null
-        if [ $? -eq 0 ]
-        then
-            echo "start ${SERVER} success"
-            exit 0
-        else
-            echo "start ${SERVER} failure"
-            exit 1
-        fi
+        sleep 5
+        $0 status
+#         if [ $? -eq 0 ]
+#         then
+#             echo "start ${SERVER} success"
+#             exit 0
+#         else
+#             echo "start ${SERVER} failure"
+#             exit 1
+#         fi
         ;;
     stop)
         echo -n "Shutting down ${SERVER}"
@@ -174,7 +176,7 @@ case "$1" in
             exit 0
         else
             echo "${SERVER} no runing"
-            exit 0
+            exit 1
         fi
         ;;
     *)

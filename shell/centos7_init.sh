@@ -16,7 +16,7 @@ ansible_key=http://
 # yum install -y epel-release
 
 # 常用软件安装
-yum install -y ntp wget tree telnet sysstat sysstat iptraf ncurses-devel openssl-devel zlib-devel  nmap screen vim
+yum install -y ntp wget tree telnet sysstat sysstat iptraf ncurses-devel openssl-devel zlib-devel  nmap screen vim lrzsz
 yum install epel-release  bash-completion   -y
 
 

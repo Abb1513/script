@@ -1,1 +1,2 @@
-{{ansible_default_ipv4.address.split(".")[-1]}}
+{# ansible_default_ipv4.address.split(".")[-1] #}
+{{ range(1, 101) | random }}

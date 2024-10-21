@@ -1,0 +1,5 @@
+roles:
+  - name: sleighzy.zookeeper
+
+collections:
+  - community.docker

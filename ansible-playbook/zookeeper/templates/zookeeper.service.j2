@@ -1,0 +1,20 @@
+[Unit]
+Description=ZooKeeper
+After=network.target
+Wants=network.target
+
+[Service]
+Type=forking
+User={{user}}
+Group={{group}}
+ExecStart={{ zookeeper_dir }}/bin/zkServer.sh start zookeeper_dir }}/conf/zoo.cfg
+ExecStop={{ zookeeper_dir }}/bin/zkServer.sh stop
+ExecReload={{ zookeeper_dir }}/bin/zkServer.sh restart
+Restart=on-failure
+RestartSec=3
+WorkingDirectory={{ zookeeper_dir }}
+Environment="JAVA_HOME={{ java_home }}"
+Environment="PATH=$JAVA_HOME/bin:$PATH"
+
+[Install]
+WantedBy=multi-user.target
